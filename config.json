@@ -1,0 +1,7 @@
+{
+  "STORE_NAME": "Sample Auto Parts",
+  "BRAND_COLOR": "#ff6600",
+  "FAQ_PATH": "data/sample/faq.json",
+  "PRODUCT_DB_PATH": "data/products.csv",
+  "WELCOME_MESSAGE": "Welcome to Sample Auto Parts! How can I help you today?"
+}

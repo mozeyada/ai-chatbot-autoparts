@@ -1,0 +1,14 @@
+# --- core ---
+torch>=2.1
+transformers>=4.39
+bitsandbytes>=0.42.0
+accelerate>=0.27
+
+# --- semantic search (if you adopt RAG later) ---
+sentence-transformers==2.3.1
+chromadb==0.4.24
+
+# --- app / utils ---
+pandas==2.2.3
+gradio==3.45.2
+tqdm==4.67.1

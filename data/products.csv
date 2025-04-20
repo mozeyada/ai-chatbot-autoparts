@@ -1,0 +1,21 @@
+SKU,PartName,Category,VehicleMake,VehicleModel,YearRange,Price,Availability
+12345,ACDelco Brake Pads,Brakes,Honda,Accord,2016-2020,45,In Stock
+56789,Bosch Spark Plug,Ignition,Toyota,Camry,2018-2022,8,Limited
+13579,NGK Oil Filter,Filter,Honda,Civic,2017-2021,12,In Stock
+24680,Valvoline Engine Oil,Engine Oil,Ford,Focus,2015-2019,30,Out of Stock
+35791,Brembo Disc Rotors,Brakes,Nissan,Altima,2014-2020,95,In Stock
+46802,Denso Air Filter,Filter,Toyota,Corolla,2015-2021,25,In Stock
+57913,Champion Wiper Blades,Accessories,Ford,Explorer,2016-2022,15,Limited
+68024,Mobil 1 Synthetic Oil,Engine Oil,BMW,3 Series,2017-2022,50,In Stock
+79135,Continental Timing Belt,Engine,Ford,Mustang,2014-2018,60,Out of Stock
+80246,Delphi Fuel Pump,Fuel System,Chevrolet,Malibu,2015-2020,85,In Stock
+91357,Monroe Shock Absorbers,Suspension,Subaru,Outback,2016-2022,110,Limited
+10246,Michelin All-Season Tires,Tires,Toyota,RAV4,2018-2023,140,In Stock
+11357,Phillips Headlights,Lighting,Audi,A4,2015-2021,35,In Stock
+12468,Gates Serpentine Belt,Engine,BMW,X5,2016-2021,40,Out of Stock
+13579,K&N Air Intake Kit,Performance,Nissan,370Z,2012-2019,180,In Stock
+14680,Bosch Brake Fluid,Brakes,Volkswagen,Golf,2017-2022,20,Limited
+15791,Lucas Transmission Fluid,Transmission,Jeep,Wrangler,2015-2021,25,In Stock
+16802,ACDelco Starter Motor,Ignition,Chevrolet,Silverado,2014-2020,150,Out of Stock
+17913,Trico Rear Wiper Blade,Accessories,Honda,CR-V,2016-2022,10,In Stock
+19024,Pirelli Performance Tires,Tires,Mercedes-Benz,E-Class,2015-2022,200,Limited
