@@ -1,0 +1,202 @@
+[
+  {
+    "id": "hours_001",
+    "category": "store_info",
+    "intent": "store_hours",
+    "question": "What are your opening hours?",
+    "answer": "We're open Monday-Friday 8:00 AM - 6:00 PM, Saturday 8:00 AM - 5:00 PM, and Sunday 10:00 AM - 4:00 PM (AEST). Extended hours during peak seasons.",
+    "keywords": ["hours", "open", "close", "time", "schedule", "when", "operating"],
+    "priority": "high",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "contact_001",
+    "category": "contact",
+    "intent": "contact_info",
+    "question": "How can I contact customer service?",
+    "answer": "Call us at 1800-AUTO-PARTS (1800-288-672), email support@autoparts.com.au, or use live chat on our website. Phone support available during business hours.",
+    "keywords": ["call", "phone", "contact", "reach", "customer service", "support", "help", "number"],
+    "priority": "high",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "location_001",
+    "category": "store_info",
+    "intent": "store_location",
+    "question": "Where are you located?",
+    "answer": "Our main warehouse is in Sydney with distribution centers in Melbourne, Brisbane, and Perth. We serve all of Australia with fast shipping.",
+    "keywords": ["location", "address", "where", "store", "warehouse", "visit"],
+    "priority": "high",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "return_001",
+    "category": "policy",
+    "intent": "return_policy",
+    "question": "What is your return policy?",
+    "answer": "30-day return policy on unused parts with original packaging and receipt. Electrical parts have a 14-day return window. Free return shipping on defective items.",
+    "keywords": ["return", "refund", "exchange", "policy", "unused", "30 days", "warranty"],
+    "priority": "high",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "shipping_001",
+    "category": "shipping",
+    "intent": "shipping_info",
+    "question": "Do you ship parts nationwide?",
+    "answer": "Yes! Free shipping on orders over $99. Express shipping available. Same-day delivery in Sydney, Melbourne, and Brisbane metro areas.",
+    "keywords": ["ship", "delivery", "freight", "nationwide", "australia", "free shipping", "express"],
+    "priority": "high",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "payment_001",
+    "category": "payment",
+    "intent": "payment_methods",
+    "question": "What payment methods do you accept?",
+    "answer": "We accept Visa, MasterCard, American Express, PayPal, Apple Pay, Google Pay, and bank transfers. Buy now, pay later with Afterpay, Zip, and Klarna.",
+    "keywords": ["pay", "payment", "card", "paypal", "afterpay", "visa", "mastercard", "zip", "klarna"],
+    "priority": "high",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "warranty_001",
+    "category": "warranty",
+    "intent": "warranty_info",
+    "question": "Do you have warranties on your parts?",
+    "answer": "All parts come with manufacturer warranties: 6-60 months depending on the part. Batteries: 24-48 months, Filters: 6-12 months, Performance parts: Lifetime warranties available.",
+    "keywords": ["warranty", "guarantee", "coverage", "protection", "manufacturer", "lifetime"],
+    "priority": "medium",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "installation_001",
+    "category": "service",
+    "intent": "installation_help",
+    "question": "Do you provide installation services?",
+    "answer": "We partner with certified mechanics nationwide. Get installation quotes, video tutorials, and step-by-step guides. Mobile installation available in major cities.",
+    "keywords": ["install", "fitting", "mechanic", "guide", "tutorial", "diy", "mobile", "service"],
+    "priority": "medium",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "compatibility_001",
+    "category": "product",
+    "intent": "part_compatibility",
+    "question": "How do I know if a part fits my vehicle?",
+    "answer": "Use our VIN lookup tool or provide your vehicle's year, make, model, and engine size. Our compatibility database covers 95% of vehicles on Australian roads.",
+    "keywords": ["fit", "compatible", "vehicle", "make", "model", "year", "vin", "engine"],
+    "priority": "high",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "stock_001",
+    "category": "inventory",
+    "intent": "out_of_stock",
+    "question": "What if the part I need is out of stock?",
+    "answer": "We can special order most parts (2-7 business days). Join our waitlist for instant notifications when items restock. Express ordering available for urgent needs.",
+    "keywords": ["out of stock", "unavailable", "special order", "notify", "back order", "waitlist"],
+    "priority": "high",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "brands_001",
+    "category": "product",
+    "intent": "brand_info",
+    "question": "What brands do you carry?",
+    "answer": "Premium brands: Bosch, ACDelco, Denso, Brembo, Michelin, Monroe, K&N, Gates, Mobil 1, NGK, Wagner, KYB, and 100+ trusted manufacturers. OEM and aftermarket options available.",
+    "keywords": ["brand", "manufacturer", "oem", "aftermarket", "quality", "bosch", "acdelco"],
+    "priority": "medium",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "pricing_001",
+    "category": "pricing",
+    "intent": "price_quote",
+    "question": "Can I get a quote for parts and installation?",
+    "answer": "Absolutely! Get instant quotes online or call for custom pricing. Bulk discounts available for fleet customers. Price matching on identical parts from competitors.",
+    "keywords": ["quote", "price", "cost", "estimate", "bulk", "pricing", "discount", "fleet"],
+    "priority": "medium",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "loyalty_001",
+    "category": "rewards",
+    "intent": "loyalty_program",
+    "question": "Do you have a loyalty program?",
+    "answer": "Join AutoParts Pro Rewards: Earn 5% back on purchases, exclusive member discounts, early access to sales, free birthday gifts, and priority customer support.",
+    "keywords": ["loyalty", "rewards", "points", "discount", "membership", "benefits", "pro"],
+    "priority": "medium",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "emergency_001",
+    "category": "service",
+    "intent": "emergency_service",
+    "question": "Do you offer emergency or after-hours service?",
+    "answer": "Emergency hotline: 1800-URGENT-AUTO (24/7). Same-day delivery for breakdowns in metro areas. Mobile mechanics available for roadside assistance.",
+    "keywords": ["emergency", "urgent", "after hours", "24/7", "breakdown", "same day", "roadside"],
+    "priority": "high",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "digital_001",
+    "category": "digital",
+    "intent": "mobile_app",
+    "question": "Do you have a mobile app?",
+    "answer": "Download AutoParts Pro app: VIN scanner, AR part visualization, order tracking, exclusive app deals, and push notifications for your vehicle's maintenance schedule.",
+    "keywords": ["app", "mobile", "download", "vin", "ar", "augmented reality", "deals", "scanner"],
+    "priority": "medium",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "eco_001",
+    "category": "sustainability",
+    "intent": "eco_friendly",
+    "question": "Do you offer eco-friendly or recycled parts?",
+    "answer": "Yes! Remanufactured parts (up to 50% savings), eco-friendly fluids, core exchange programs, and recycling services. Carbon-neutral shipping options available.",
+    "keywords": ["eco", "green", "recycled", "remanufactured", "sustainable", "environment", "carbon"],
+    "priority": "low",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "trade_001",
+    "category": "business",
+    "intent": "trade_account",
+    "question": "Do you offer trade accounts for mechanics?",
+    "answer": "Professional trade accounts available: 15-25% trade discounts, net 30 payment terms, dedicated account manager, and priority stock allocation.",
+    "keywords": ["trade", "mechanic", "professional", "account", "discount", "net 30", "business"],
+    "priority": "medium",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "diagnostic_001",
+    "category": "service",
+    "intent": "diagnostic_help",
+    "question": "Can you help diagnose my car problem?",
+    "answer": "Our technical team can help identify parts based on symptoms. Use our online diagnostic tool or call for expert advice. We partner with qualified mechanics for complex issues.",
+    "keywords": ["diagnose", "problem", "symptoms", "technical", "help", "advice", "diagnostic"],
+    "priority": "medium",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "bulk_001",
+    "category": "business",
+    "intent": "bulk_orders",
+    "question": "Do you handle bulk orders for fleets?",
+    "answer": "Fleet specialists available for bulk orders: Custom pricing, scheduled deliveries, inventory management, and dedicated support for commercial customers.",
+    "keywords": ["bulk", "fleet", "commercial", "volume", "wholesale", "business", "scheduled"],
+    "priority": "medium",
+    "last_updated": "2024-12-19"
+  },
+  {
+    "id": "performance_001",
+    "category": "product",
+    "intent": "performance_parts",
+    "question": "Do you sell performance and racing parts?",
+    "answer": "Extensive performance catalog: Cold air intakes, exhaust systems, suspension upgrades, turbo parts, and racing components. Custom builds and tuning advice available.",
+    "keywords": ["performance", "racing", "tuning", "exhaust", "turbo", "suspension", "custom"],
+    "priority": "medium",
+    "last_updated": "2024-12-19"
+  }
+]

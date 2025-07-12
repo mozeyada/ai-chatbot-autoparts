@@ -1,0 +1,44 @@
+{
+  "battery": {
+    "difficulty": "Easy",
+    "time": "15-30 minutes",
+    "tools": "10mm wrench, safety gloves",
+    "steps": "1. Turn off engine and remove keys. 2. Disconnect negative terminal first, then positive. 3. Remove battery hold-down bracket. 4. Install new battery and reconnect positive first, then negative.",
+    "safety": "Always wear safety gloves and eye protection. Ensure engine is completely off."
+  },
+  "lights": {
+    "difficulty": "Easy-Medium",
+    "time": "10-20 minutes",
+    "tools": "Screwdriver, gloves",
+    "steps": "1. Turn off headlights and engine. 2. Open hood and locate headlight assembly. 3. Disconnect electrical connector. 4. Remove old bulb by turning counterclockwise. 5. Install new bulb without touching glass.",
+    "safety": "Never touch LED/halogen bulbs with bare hands. Allow lights to cool before replacement."
+  },
+  "wipers": {
+    "difficulty": "Easy",
+    "time": "5-10 minutes",
+    "tools": "None required",
+    "steps": "1. Lift wiper arm away from windshield. 2. Press release tab and slide old blade off. 3. Slide new blade on until it clicks. 4. Lower arm back to windshield.",
+    "safety": "Be gentle with wiper arms to avoid damaging windshield."
+  },
+  "air filter": {
+    "difficulty": "Easy",
+    "time": "10-15 minutes",
+    "tools": "Screwdriver (sometimes)",
+    "steps": "1. Locate air filter box near engine. 2. Unclip or unscrew air filter housing. 3. Remove old filter and clean housing. 4. Install new filter ensuring proper fit. 5. Reassemble housing.",
+    "safety": "Ensure engine is off and cool before starting."
+  },
+  "spark plugs": {
+    "difficulty": "Medium",
+    "time": "30-60 minutes",
+    "tools": "Spark plug socket, ratchet, gap gauge",
+    "steps": "1. Let engine cool completely. 2. Remove ignition coils/wires. 3. Use spark plug socket to remove old plugs. 4. Check gap on new plugs. 5. Install new plugs hand-tight plus 1/4 turn.",
+    "safety": "Never over-tighten spark plugs. Ensure engine is completely cool."
+  },
+  "oil filter": {
+    "difficulty": "Medium",
+    "time": "30-45 minutes",
+    "tools": "Oil filter wrench, drain pan, funnel",
+    "steps": "1. Warm engine slightly, then turn off. 2. Raise vehicle safely. 3. Drain oil and remove old filter. 4. Apply thin layer of oil to new filter gasket. 5. Install new filter hand-tight plus 3/4 turn.",
+    "safety": "Use proper jack stands. Hot oil can cause burns."
+  }
+}

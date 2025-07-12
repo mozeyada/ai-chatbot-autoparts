@@ -1,21 +1,62 @@
-SKU,PartName,Category,VehicleMake,VehicleModel,YearRange,Price,Availability
-12345,ACDelco Brake Pads,Brakes,Honda,Accord,2016-2020,45,In Stock
-56789,Bosch Spark Plug,Ignition,Toyota,Camry,2018-2022,8,Limited
-13579,NGK Oil Filter,Filter,Honda,Civic,2017-2021,12,In Stock
-24680,Valvoline Engine Oil,Engine Oil,Ford,Focus,2015-2019,30,Out of Stock
-35791,Brembo Disc Rotors,Brakes,Nissan,Altima,2014-2020,95,In Stock
-46802,Denso Air Filter,Filter,Toyota,Corolla,2015-2021,25,In Stock
-57913,Champion Wiper Blades,Accessories,Ford,Explorer,2016-2022,15,Limited
-68024,Mobil 1 Synthetic Oil,Engine Oil,BMW,3 Series,2017-2022,50,In Stock
-79135,Continental Timing Belt,Engine,Ford,Mustang,2014-2018,60,Out of Stock
-80246,Delphi Fuel Pump,Fuel System,Chevrolet,Malibu,2015-2020,85,In Stock
-91357,Monroe Shock Absorbers,Suspension,Subaru,Outback,2016-2022,110,Limited
-10246,Michelin All-Season Tires,Tires,Toyota,RAV4,2018-2023,140,In Stock
-11357,Phillips Headlights,Lighting,Audi,A4,2015-2021,35,In Stock
-12468,Gates Serpentine Belt,Engine,BMW,X5,2016-2021,40,Out of Stock
-13579,K&N Air Intake Kit,Performance,Nissan,370Z,2012-2019,180,In Stock
-14680,Bosch Brake Fluid,Brakes,Volkswagen,Golf,2017-2022,20,Limited
-15791,Lucas Transmission Fluid,Transmission,Jeep,Wrangler,2015-2021,25,In Stock
-16802,ACDelco Starter Motor,Ignition,Chevrolet,Silverado,2014-2020,150,Out of Stock
-17913,Trico Rear Wiper Blade,Accessories,Honda,CR-V,2016-2022,10,In Stock
-19024,Pirelli Performance Tires,Tires,Mercedes-Benz,E-Class,2015-2022,200,Limited
+SKU,PartName,Category,VehicleMake,VehicleModel,YearRange,Price,Availability,Brand,Description,PartNumber,Warranty,Rating,ReviewCount,Tags,ImageURL,Weight,Dimensions,InstallDifficulty,EstimatedLabor
+12345,ACDelco Brake Pads,Brakes,Honda,Accord,2016-2020,45,In Stock,ACDelco,Premium ceramic brake pads for superior stopping power,D1363C,12 months,4.5,127,"brake,ceramic,premium,oem",/images/brake-pads-honda.jpg,2.1kg,25x15x3cm,Medium,1.5 hours
+12346,Wagner Brake Pads,Brakes,Honda,Civic,2017-2021,38,In Stock,Wagner,OE-quality brake pads with excellent stopping performance,ZD1363,12 months,4.3,89,"brake,ceramic,oem,stopping",/images/brake-pads-honda-civic.jpg,1.9kg,24x14x3cm,Medium,1.5 hours
+12347,Raybestos Brake Pads,Brakes,Honda,CR-V,2015-2021,42,Limited,Raybestos,Professional grade brake pads for SUVs,PGD1363,18 months,4.6,156,"brake,professional,suv,ceramic",/images/brake-pads-honda-crv.jpg,2.3kg,26x16x3cm,Medium,1.5 hours
+56789,Bosch Spark Plug,Spark Plugs,Toyota,Camry,2018-2022,8,Limited,Bosch,Iridium spark plug for enhanced performance and fuel economy,9619,24 months,4.7,89,"spark,iridium,performance,fuel-economy",/images/spark-plug-toyota.jpg,0.1kg,10x2x2cm,Easy,0.5 hours
+56790,NGK Spark Plugs,Spark Plugs,Honda,Accord,2016-2020,12,In Stock,NGK,Platinum spark plugs set of 4 for V4 engines,BKR7E,24 months,4.8,234,"spark,platinum,set,v4",/images/spark-plugs-honda.jpg,0.4kg,10x2x2cm,Easy,1.0 hours
+56791,Denso Spark Plugs,Spark Plugs,Toyota,Corolla,2015-2021,10,In Stock,Denso,OEM replacement spark plugs for reliable ignition,K20HR-U11,24 months,4.6,178,"spark,oem,reliable,ignition",/images/spark-plugs-toyota.jpg,0.3kg,10x2x2cm,Easy,0.8 hours
+56792,Champion Spark Plugs,Spark Plugs,Ford,Focus,2015-2019,9,In Stock,Champion,Copper core spark plugs for standard performance,RC12YC,12 months,4.2,145,"spark,copper,standard,affordable",/images/spark-plugs-ford.jpg,0.3kg,10x2x2cm,Easy,0.8 hours
+56793,Bosch Platinum Spark Plugs,Spark Plugs,BMW,3 Series,2017-2022,15,In Stock,Bosch,Premium platinum spark plugs for luxury vehicles,FR7DPP332,36 months,4.9,267,"spark,platinum,luxury,premium",/images/spark-plugs-bmw.jpg,0.4kg,10x2x2cm,Easy,1.0 hours
+13579,NGK Oil Filter,Filter,Honda,Civic,2017-2021,12,In Stock,NGK,High-efficiency oil filter with superior filtration,15400-PLM-A02,6 months,4.3,156,"oil,filter,maintenance,oem",/images/oil-filter-honda.jpg,0.3kg,8x8x6cm,Easy,0.3 hours
+13580,Fram Oil Filter,Filter,Toyota,Camry,2018-2022,8,In Stock,Fram,Extra Guard oil filter for extended protection,PH3593A,6 months,4.1,298,"oil,filter,protection,affordable",/images/oil-filter-toyota.jpg,0.3kg,8x8x6cm,Easy,0.3 hours
+13581,Mobil 1 Oil Filter,Filter,Ford,Focus,2015-2019,14,In Stock,Mobil 1,Extended performance oil filter for synthetic oils,M1-110A,12 months,4.7,189,"oil,filter,synthetic,extended",/images/oil-filter-ford.jpg,0.4kg,9x9x7cm,Easy,0.3 hours
+13582,K&N Oil Filter,Filter,BMW,3 Series,2017-2022,18,Limited,K&N,High-flow oil filter for performance applications,HP-1017,12 months,4.8,134,"oil,filter,performance,high-flow",/images/oil-filter-bmw.jpg,0.4kg,9x9x7cm,Easy,0.3 hours
+46802,Denso Air Filter,Filter,Toyota,Corolla,2015-2021,25,In Stock,Denso,OEM-quality air filter for optimal engine performance,17801-21050,12 months,4.4,92,"air,filter,oem,performance",/images/air-filter-toyota.jpg,0.4kg,20x15x5cm,Easy,0.2 hours
+46803,K&N Air Filter,Filter,Honda,Accord,2016-2020,35,In Stock,K&N,Reusable high-flow air filter for better performance,33-2155,Million Mile,4.9,456,"air,filter,reusable,performance",/images/air-filter-honda.jpg,0.5kg,22x16x5cm,Easy,0.2 hours
+46804,Fram Air Filter,Filter,Ford,Focus,2015-2019,18,In Stock,Fram,Extra Guard air filter for engine protection,CA10467,12 months,4.2,167,"air,filter,protection,standard",/images/air-filter-ford.jpg,0.3kg,19x14x5cm,Easy,0.2 hours
+24680,Valvoline Engine Oil,Engine Oil,Ford,Focus,2015-2019,30,Out of Stock,Valvoline,Full synthetic 5W-30 motor oil for maximum protection,VV966,N/A,4.6,234,"synthetic,oil,protection,performance",/images/engine-oil-ford.jpg,4.7kg,25x15x30cm,Easy,0.2 hours
+24681,Mobil 1 Synthetic Oil,Engine Oil,Honda,Accord,2016-2020,45,In Stock,Mobil 1,Advanced full synthetic 0W-20 motor oil,120766,N/A,4.8,567,"synthetic,premium,protection,honda",/images/engine-oil-honda.jpg,4.7kg,25x15x30cm,Easy,0.2 hours
+24682,Castrol GTX Oil,Engine Oil,Toyota,Camry,2018-2022,25,In Stock,Castrol,Conventional motor oil 5W-30 for reliable protection,15049C,N/A,4.3,289,"conventional,oil,reliable,affordable",/images/engine-oil-toyota.jpg,4.7kg,25x15x30cm,Easy,0.2 hours
+68024,Mobil 1 Synthetic Oil,Engine Oil,BMW,3 Series,2017-2022,50,In Stock,Mobil 1,Advanced full synthetic motor oil 0W-20,120766,N/A,4.7,312,"synthetic,premium,protection,bmw",/images/synthetic-oil-bmw.jpg,4.7kg,25x15x30cm,Easy,0.2 hours
+20135,Optima Battery,Battery,Honda,Accord,2016-2020,120,In Stock,Optima,AGM deep-cycle battery with superior starting power,8004-003,36 months,4.6,189,"battery,agm,deep-cycle,starting",/images/battery-honda.jpg,18.1kg,25x17x19cm,Easy,0.5 hours
+21246,Duralast Battery,Battery,Toyota,Camry,2018-2022,95,In Stock,Duralast,Maintenance-free battery with 650 CCA,24F-DL,24 months,4.3,156,"battery,maintenance-free,cca,reliable",/images/battery-toyota.jpg,16.8kg,24x17x19cm,Easy,0.5 hours
+22357,Interstate Battery,Battery,Ford,Focus,2015-2019,85,In Stock,Interstate,Premium automotive battery with 3-year warranty,MTP-24F,36 months,4.4,134,"battery,premium,automotive,warranty",/images/battery-ford.jpg,17.2kg,24x17x19cm,Easy,0.5 hours
+22358,DieHard Battery,Battery,BMW,3 Series,2017-2022,140,In Stock,DieHard,Advanced AGM battery for luxury vehicles,94R-AGM,48 months,4.7,98,"battery,agm,luxury,advanced",/images/battery-bmw.jpg,19.5kg,26x18x20cm,Easy,0.5 hours
+22359,EverStart Battery,Battery,Chevrolet,Malibu,2015-2020,75,In Stock,EverStart,Value automotive battery with reliable performance,24F-3,24 months,4.1,234,"battery,value,reliable,affordable",/images/battery-chevy.jpg,16.2kg,24x17x19cm,Easy,0.5 hours
+10246,Michelin All-Season Tires,Tires,Toyota,RAV4,2018-2023,140,In Stock,Michelin,All-season radial tire 225/65R17 with excellent traction,04309,60 months,4.8,423,"tire,all-season,radial,traction",/images/tires-toyota.jpg,12.5kg,65x65x22cm,Medium,1.0 hours
+10247,Bridgestone Tires,Tires,Honda,CR-V,2015-2021,125,In Stock,Bridgestone,Turanza all-season tire 235/60R18 for SUVs,T005,60 months,4.6,298,"tire,all-season,suv,comfort",/images/tires-honda.jpg,13.2kg,60x60x23cm,Medium,1.0 hours
+10248,Goodyear Tires,Tires,Ford,Explorer,2016-2022,135,Limited,Goodyear,Assurance WeatherReady 245/60R18 all-weather tire,103H,60 months,4.7,189,"tire,all-weather,suv,reliable",/images/tires-ford.jpg,14.1kg,60x60x24cm,Medium,1.0 hours
+19024,Pirelli Performance Tires,Tires,Mercedes-Benz,E-Class,2015-2022,200,Limited,Pirelli,High-performance summer tire 245/45R18,2357400,48 months,4.9,267,"tire,performance,summer,grip",/images/performance-tires-mercedes.jpg,14.2kg,70x70x24cm,Medium,1.0 hours
+35791,Brembo Disc Rotors,Brakes,Nissan,Altima,2014-2020,95,In Stock,Brembo,High-performance ventilated disc rotors,09.A415.11,24 months,4.8,78,"brake,rotor,performance,ventilated",/images/disc-rotors-nissan.jpg,8.5kg,30x30x5cm,Hard,2.0 hours
+35792,AC Delco Brake Rotors,Brakes,Honda,Accord,2016-2020,75,In Stock,AC Delco,OEM replacement brake rotors for reliable stopping,18A2324A,24 months,4.5,145,"brake,rotor,oem,reliable",/images/brake-rotors-honda.jpg,7.8kg,29x29x5cm,Hard,2.0 hours
+35793,Wagner Brake Rotors,Brakes,Toyota,Camry,2018-2022,68,In Stock,Wagner,Premium brake rotors with corrosion protection,BD125411,18 months,4.4,167,"brake,rotor,premium,protection",/images/brake-rotors-toyota.jpg,7.5kg,28x28x5cm,Hard,2.0 hours
+91357,Monroe Shock Absorbers,Suspension,Subaru,Outback,2016-2022,110,Limited,Monroe,Gas-charged shock absorbers for smooth ride quality,58640,36 months,4.6,98,"shock,suspension,gas-charged,comfort",/images/shock-absorbers-subaru.jpg,3.2kg,50x10x10cm,Medium,1.5 hours
+91358,KYB Struts,Suspension,Honda,Accord,2016-2020,95,In Stock,KYB,Excel-G struts for restored ride and handling,334380,36 months,4.5,234,"strut,suspension,ride,handling",/images/struts-honda.jpg,4.1kg,55x12x12cm,Hard,2.5 hours
+91359,Gabriel Shocks,Suspension,Toyota,RAV4,2018-2023,85,In Stock,Gabriel,Ultra shock absorbers for SUV applications,83115,24 months,4.3,156,"shock,suspension,suv,ultra",/images/shocks-toyota.jpg,2.8kg,48x9x9cm,Medium,1.5 hours
+11357,Phillips Headlights,Lighting,Audi,A4,2015-2021,35,In Stock,Phillips,LED headlight bulb with 6000K bright white light,12362B1,24 months,4.4,167,"led,headlight,bright,white",/images/headlights-audi.jpg,0.2kg,12x8x8cm,Medium,0.5 hours
+11358,Sylvania Headlights,Lighting,Honda,Accord,2016-2020,25,In Stock,Sylvania,Halogen headlight bulbs H11 standard replacement,H11,12 months,4.2,289,"halogen,headlight,standard,h11",/images/headlights-honda.jpg,0.1kg,10x6x6cm,Easy,0.3 hours
+11359,PIAA LED Headlights,Lighting,Toyota,Camry,2018-2022,45,Limited,PIAA,Premium LED headlight conversion kit,LEH120,36 months,4.8,134,"led,headlight,premium,conversion",/images/headlights-toyota.jpg,0.3kg,12x8x8cm,Medium,0.8 hours
+11360,GE Tail Lights,Lighting,Ford,Focus,2015-2019,15,In Stock,GE,Standard tail light bulbs 1157 dual filament,1157,6 months,4.0,198,"tail,light,standard,dual",/images/taillights-ford.jpg,0.05kg,5x3x3cm,Easy,0.2 hours
+57913,Champion Wiper Blades,Accessories,Ford,Explorer,2016-2022,15,Limited,Champion,All-weather wiper blades with aerodynamic design,6024,6 months,4.2,145,"wiper,weather,aerodynamic,visibility",/images/wiper-blades-ford.jpg,0.5kg,60x5x3cm,Easy,0.1 hours
+17913,Trico Rear Wiper Blade,Accessories,Honda,CR-V,2016-2022,10,In Stock,Trico,Rear windshield wiper blade with precision fit,14-A,6 months,4.1,89,"wiper,rear,windshield,precision",/images/rear-wiper-honda.jpg,0.3kg,35x5x3cm,Easy,0.1 hours
+57914,Bosch Wiper Blades,Accessories,Toyota,Camry,2018-2022,22,In Stock,Bosch,Icon beam wiper blades for superior performance,26A,12 months,4.7,267,"wiper,beam,superior,performance",/images/wiper-blades-toyota.jpg,0.6kg,65x6x4cm,Easy,0.1 hours
+57915,Rain-X Wiper Blades,Accessories,BMW,3 Series,2017-2022,28,In Stock,Rain-X,Latitude water repelling wiper blades,5079281-2,12 months,4.5,178,"wiper,water-repelling,latitude,premium",/images/wiper-blades-bmw.jpg,0.7kg,65x6x4cm,Easy,0.1 hours
+79135,Continental Timing Belt,Engine,Ford,Mustang,2014-2018,60,Out of Stock,Continental,Precision-engineered timing belt for reliable performance,CT1028,18 months,4.5,67,"timing,belt,precision,reliability",/images/timing-belt-ford.jpg,0.8kg,15x10x5cm,Hard,3.0 hours
+12468,Gates Serpentine Belt,Engine,BMW,X5,2016-2021,40,Out of Stock,Gates,Heavy-duty serpentine belt for accessory drive system,K060965,18 months,4.5,89,"serpentine,belt,heavy-duty,drive",/images/serpentine-belt-bmw.jpg,0.6kg,120x3x1cm,Medium,1.0 hours
+79136,Dayco Timing Belt,Engine,Honda,Accord,2016-2020,55,In Stock,Dayco,OEM-quality timing belt for interference engines,95312,18 months,4.6,123,"timing,belt,oem,interference",/images/timing-belt-honda.jpg,0.7kg,14x9x5cm,Hard,3.0 hours
+12469,Goodyear Serpentine Belt,Engine,Toyota,Camry,2018-2022,35,In Stock,Goodyear,Gatorback serpentine belt with superior grip,4060855,18 months,4.4,156,"serpentine,belt,gatorback,grip",/images/serpentine-belt-toyota.jpg,0.5kg,115x3x1cm,Medium,1.0 hours
+80246,Delphi Fuel Pump,Fuel System,Chevrolet,Malibu,2015-2020,85,In Stock,Delphi,Electric fuel pump assembly with pressure regulator,FG1057,24 months,4.3,54,"fuel,pump,electric,assembly",/images/fuel-pump-chevy.jpg,1.2kg,20x15x10cm,Hard,2.5 hours
+80247,Bosch Fuel Pump,Fuel System,Honda,Accord,2016-2020,95,Limited,Bosch,High-pressure fuel pump for direct injection engines,66110,24 months,4.6,89,"fuel,pump,high-pressure,injection",/images/fuel-pump-honda.jpg,1.4kg,22x16x12cm,Hard,2.5 hours
+80248,Carter Fuel Pump,Fuel System,Toyota,Camry,2018-2022,78,In Stock,Carter,Electric fuel pump module assembly,P76254M,24 months,4.2,134,"fuel,pump,module,electric",/images/fuel-pump-toyota.jpg,1.1kg,19x14x9cm,Hard,2.5 hours
+13579,K&N Air Intake Kit,Performance,Nissan,370Z,2012-2019,180,In Stock,K&N,Cold air intake system for increased horsepower,57-3510,Million Mile,4.7,134,"intake,performance,horsepower,cold-air",/images/air-intake-nissan.jpg,2.8kg,40x30x20cm,Medium,2.0 hours
+13580,AEM Cold Air Intake,Performance,Honda,Civic,2017-2021,220,Limited,AEM,Performance cold air intake with dry flow filter,21-756C,Million Mile,4.8,98,"intake,performance,cold-air,dry-flow",/images/air-intake-honda.jpg,3.1kg,42x32x22cm,Medium,2.0 hours
+13581,Injen Intake System,Performance,Toyota,86,2017-2022,195,In Stock,Injen,Short ram air intake for improved throttle response,SP1230P,Million Mile,4.6,67,"intake,short-ram,throttle,response",/images/air-intake-toyota.jpg,2.5kg,35x25x18cm,Medium,1.5 hours
+14680,Bosch Brake Fluid,Brakes,Volkswagen,Golf,2017-2022,20,Limited,Bosch,DOT 4 brake fluid for high-performance braking systems,ESI6-32N,N/A,4.3,76,"brake,fluid,dot4,performance",/images/brake-fluid-vw.jpg,1.0kg,15x10x25cm,Easy,0.1 hours
+14681,Valvoline Brake Fluid,Brakes,Honda,Accord,2016-2020,15,In Stock,Valvoline,DOT 3 brake fluid for standard braking systems,VV32,N/A,4.1,145,"brake,fluid,dot3,standard",/images/brake-fluid-honda.jpg,1.0kg,15x10x25cm,Easy,0.1 hours
+15791,Lucas Transmission Fluid,Transmission,Jeep,Wrangler,2015-2021,25,In Stock,Lucas,ATF+4 automatic transmission fluid for smooth shifting,10009,N/A,4.4,112,"transmission,fluid,atf,smooth",/images/transmission-fluid-jeep.jpg,1.0kg,15x10x25cm,Easy,0.3 hours
+15792,Mobil 1 ATF,Transmission,Honda,Accord,2016-2020,35,In Stock,Mobil 1,Synthetic automatic transmission fluid for Honda,112980,N/A,4.7,189,"transmission,fluid,synthetic,honda",/images/transmission-fluid-honda.jpg,1.0kg,15x10x25cm,Easy,0.3 hours
+15793,Castrol Transmax,Transmission,Toyota,Camry,2018-2022,28,In Stock,Castrol,Multi-vehicle automatic transmission fluid,06816-80508,N/A,4.5,156,"transmission,fluid,multi-vehicle,castrol",/images/transmission-fluid-toyota.jpg,1.0kg,15x10x25cm,Easy,0.3 hours
+16802,ACDelco Starter Motor,Electrical,Chevrolet,Silverado,2014-2020,150,Out of Stock,ACDelco,Remanufactured starter motor with solenoid,336-1930A,24 months,4.2,43,"starter,motor,remanufactured,solenoid",/images/starter-motor-chevy.jpg,4.5kg,25x15x15cm,Hard,2.0 hours
+16803,Bosch Starter,Electrical,Honda,Accord,2016-2020,185,Limited,Bosch,New starter motor for reliable engine starting,SR0468X,24 months,4.6,78,"starter,motor,new,reliable",/images/starter-honda.jpg,4.2kg,24x14x14cm,Hard,2.0 hours
+16804,Denso Alternator,Electrical,Toyota,Camry,2018-2022,165,In Stock,Denso,OEM replacement alternator 130 amp output,210-4340,24 months,4.5,134,"alternator,oem,130-amp,output",/images/alternator-toyota.jpg,6.8kg,30x20x15cm,Hard,2.5 hours
+16805,AC Delco Alternator,Electrical,Ford,Focus,2015-2019,145,In Stock,AC Delco,Remanufactured alternator with 2-year warranty,334-2518A,24 months,4.3,98,"alternator,remanufactured,warranty,ford",/images/alternator-ford.jpg,6.2kg,28x18x14cm,Hard,2.5 hours
