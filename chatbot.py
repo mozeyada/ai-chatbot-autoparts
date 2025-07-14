@@ -1056,7 +1056,7 @@ theme = gr.themes.Soft(primary_hue="orange")
 demo = gr.ChatInterface(
     fn=chat_interface,
     theme=theme,
-    title="🔧 Auto Parts Assistant",
+    title="Auto Parts Assistant",
     description="Find live stock, prices & policies for automotive parts",
     examples=[
         "Honda battery",

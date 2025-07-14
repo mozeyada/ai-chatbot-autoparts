@@ -1,36 +1,36 @@
-# 🔧 AI Auto Parts Chatbot
+# AI Auto Parts Chatbot
 
 A sophisticated hybrid chatbot combining LLM intelligence with deterministic business logic for auto parts retail. Features smart inventory search, customer service automation, and professional installation guidance.
 
-## ✨ Features
+## Features
 
-### 🧠 **Intelligent Conversation**
+### Intelligent Conversation
 - **Hybrid Architecture**: LLM for natural responses + CSV tools for accurate business data
 - **Context Persistence**: Remembers vehicle and part preferences across conversation turns
 - **Coreference Resolution**: Understands "same car", "that part", "my vehicle" references
 - **Multi-turn Conversations**: Maintains context for natural dialogue flow
 
-### 🔍 **Smart Parts Search**
+### Smart Parts Search
 - **Fuzzy Matching**: Handles typos like "battry" → "battery"
 - **60+ Auto Parts**: Comprehensive inventory across all major categories
 - **Real-time Stock**: Live availability checking with alternatives
 - **11 Vehicle Makes**: Honda, Toyota, Ford, BMW, Nissan, Chevrolet, Subaru, Audi, VW, Jeep, Mercedes
 
-### 🛠️ **Professional Services**
+### Professional Services
 - **Installation Guidance**: DIY tips for simple parts, professional booking for complex work
 - **3-Step Lead Capture**: Structured customer contact collection
 - **FAQ Integration**: 20+ store policies and information entries
 - **Dynamic Stock Alternatives**: Shows real inventory when requested parts unavailable
 
-### 🎨 **Modern Interface**
+### Modern Interface
 - **Orange-themed UI**: Professional Gradio interface with dark mode support
 - **Quick-reply Buttons**: One-click common queries
 - **Copyable SKUs**: Easy part number copying
 - **Mobile-friendly**: Responsive design for all devices
 
-## 🚀 Quick Start
+## Quick Start
 
-> **🎯 New to this project? Check out our [5-minute setup guide](SETUP.md) for the fastest way to get started!**
+> **New to this project? Check out our [5-minute setup guide](SETUP.md) for the fastest way to get started!**
 
 ### Prerequisites
 - Python 3.8+
@@ -88,7 +88,7 @@ A sophisticated hybrid chatbot combining LLM intelligence with deterministic bus
    - Local: http://localhost:7860
    - Shareable link provided in terminal
 
-## ⚠️ Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -111,7 +111,7 @@ A sophisticated hybrid chatbot combining LLM intelligence with deterministic bus
 - The chatbot will automatically find an available port
 - Check the terminal output for the correct URL
 
-## 💬 Usage Examples
+## Usage Examples
 
 | Query | Response |
 |-------|----------|
@@ -121,7 +121,7 @@ A sophisticated hybrid chatbot combining LLM intelligence with deterministic bus
 | `"same car brakes"` | Uses context to find brakes for previously mentioned vehicle |
 | `"installation help"` | Provides DIY guidance or professional service booking |
 
-## 🧪 Testing
+## Testing
 
 Run the comprehensive test suite:
 
@@ -135,7 +135,7 @@ python -m pytest tests/test_lead_capture.py -v   # Lead capture flow
 python -m pytest tests/test_same_car_coref.py -v # Context resolution
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ai-chatbot-autoparts/
@@ -153,7 +153,7 @@ ai-chatbot-autoparts/
 └── README.md             # This file
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 ### Hybrid LLM + Tools Design
 - **Deterministic Layer**: CSV/JSON data for SKUs, prices, availability
@@ -167,7 +167,7 @@ ai-chatbot-autoparts/
 4. **Lead Capture**: 3-step customer contact collection system
 5. **Installation Assistant**: DIY guidance + professional service booking
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 ```bash
@@ -180,7 +180,7 @@ GROQ_API_KEY=your_groq_api_key_here
 - **category_synonyms.csv**: Add new part category mappings
 - **install_tips.json**: Customize DIY installation guidance
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -188,14 +188,14 @@ GROQ_API_KEY=your_groq_api_key_here
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📊 Performance
+## Performance
 
 - **Response Time**: < 2 seconds average
 - **Accuracy**: 95%+ for part searches
 - **Context Retention**: 5+ conversation turns
 - **Test Coverage**: 85%+ with comprehensive test suite
 
-## 🛡️ Behavior & Safeguards
+## Behavior & Safeguards
 
 ### Conversation Management
 - **Toxic Language**: Polite de-escalation with respectful redirection
@@ -208,17 +208,17 @@ GROQ_API_KEY=your_groq_api_key_here
 - **No PII Storage**: Customer data handled securely with environment variables
 - **Input Validation**: Sanitizes and validates all user inputs
 
-## 🛡️ Compliance
+## Compliance
 
 - **ISO 42001 Annex A (§A.5)**: Deterministic accuracy for business data
 - **ISO/IEC 5469**: AI safety guidelines compliance
 - **Data Privacy**: No PII storage, environment-based API key management
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Groq**: Fast LLM inference
 - **Gradio**: Modern web interface

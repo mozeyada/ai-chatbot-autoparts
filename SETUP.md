@@ -1,14 +1,14 @@
-# 🚀 Quick Setup Guide
+# Quick Setup Guide
 
 This guide will help you get the AI Auto Parts Chatbot running in 5 minutes.
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Python 3.8+** installed on your system
 - **Internet connection** for API access
 - **Terminal/Command Prompt** access
 
-## 🔑 Step 1: Get Your Free Groq API Key
+## Step 1: Get Your Free Groq API Key
 
 1. **Visit** [console.groq.com](https://console.groq.com/keys)
 2. **Sign up** for a free account (no credit card required)
@@ -16,7 +16,7 @@ This guide will help you get the AI Auto Parts Chatbot running in 5 minutes.
 4. **Copy** the key (it starts with `gsk_...`)
 5. **Keep it safe** - you'll need it in the next step
 
-## 💻 Step 2: Download and Setup
+## Step 2: Download and Setup
 
 1. **Clone the repository**
    ```bash
@@ -40,7 +40,7 @@ This guide will help you get the AI Auto Parts Chatbot running in 5 minutes.
    echo "GROQ_API_KEY=gsk_your_actual_key_here" > .env
    ```
 
-## 🏃‍♂️ Step 3: Run the Chatbot
+## Step 3: Run the Chatbot
 
 **Easy way (recommended):**
 ```bash
@@ -69,7 +69,7 @@ pip install -r requirements.txt
 python chatbot.py
 ```
 
-## 🎉 Step 4: Access the Interface
+## Step 4: Access the Interface
 
 1. **Look for this message** in your terminal:
    ```
@@ -83,7 +83,7 @@ python chatbot.py
    - "Toyota tires"
    - "What are your hours?"
 
-## ❓ Having Issues?
+## Having Issues?
 
 ### "GROQ_API_KEY environment variable is required"
 - ✅ Make sure you created the `.env` file
@@ -105,6 +105,6 @@ pip install -r requirements.txt
 
 ---
 
-**🎯 That's it! You should now have a working AI chatbot for auto parts.**
+**That's it! You should now have a working AI chatbot for auto parts.**
 
-**💡 Tip:** The chatbot works best when you specify both vehicle make and part type (e.g., "Honda battery" instead of just "battery").
+**Tip:** The chatbot works best when you specify both vehicle make and part type (e.g., "Honda battery" instead of just "battery").
