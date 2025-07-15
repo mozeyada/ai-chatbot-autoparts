@@ -1,51 +1,61 @@
-import gradio as gr
-import pandas as pd
-import json
-import csv
-import requests
-from datetime import datetime
-import re
+"""
+Main AutoPartsChatbot class for the AI Auto Parts Chatbot.
+Coordinates between data loading, intent processing, and conversation management.
+"""
+
 import os
-from typing import Dict, List, Tuple, Optional
-from rapidfuzz import process, fuzz
+import re
+from typing import Dict, List
 from dotenv import load_dotenv
+from data_loader import (
+    load_products, load_faq, load_synonyms, load_install_tips, 
+    load_install_times, load_vehicle_synonyms, init_leads_file,
+    save_lead_with_service, save_lead
+)
+from intent import (
+    resolve_coref, is_toxic, detect_intent, extract_vehicle_and_part,
+    search_parts, check_faq, call_groq_api, format_parts_with_llm,
+    format_parts_response, detect_multi_query, split_multi_query,
+    normalize_category, is_valid_name, extract_contact_details,
+    is_valid_email, is_valid_phone, is_absurd_or_nonsense
+)
 
 # Load environment variables
 load_dotenv()
 
+
 class AutoPartsChatbot:
     def __init__(self):
-        try:
-            self.products_df = pd.read_csv('data/products.csv')
-        except FileNotFoundError:
-            print("Error: products.csv not found. Please ensure data files exist.")
-            self.products_df = pd.DataFrame()
+        # Load all data
+        self.products_df = load_products()
+        self.faq_data = load_faq()
+        self.synonyms = load_synonyms()
+        self.vehicle_synonyms = load_vehicle_synonyms()
+        self.install_tips = load_install_tips()
+        self.install_times = load_install_times()
         
-        self.faq_data = self.load_faq()
-        self.synonyms = self.load_synonyms()
-        self.vehicle_synonyms = self.load_vehicle_synonyms()
+        # API key setup
         self.groq_api_key = os.environ.get("GROQ_API_KEY")
-        # Allow missing API key during testing
         if not self.groq_api_key and not os.environ.get("PYTEST_CURRENT_TEST"):
             raise ValueError("GROQ_API_KEY environment variable is required. Please set it in your .env file or environment.")
+        
+        # Initialize leads file
         self.leads_file = 'data/leads.csv'
-        self.init_leads_file()
-        self.install_tips = self.load_install_tips()
-        self.install_times = self.load_install_times()
-        self.pending_install_lead = False
-        self.pending_action = None
+        init_leads_file(self.leads_file)
+        
         # Session state for conversation context
         self.session_vehicle = None
         self.session_part = None
         self.awaiting_lead_capture = False
-        self.lead_capture_step = None  # 'name', 'contact', or None
+        self.lead_capture_step = None
         self.lead_name = None
         self.conversation_handled = False
         self.invalid_turns = 0
         self.help_shown = False
         self.last_response_type = None
+        self.pending_install_lead = False
+        self.pending_action = None
         
-        # Advanced conversation context system
         # Enhanced context memory
         self.slot_memory = {
             'vehicle_make': None,
@@ -55,12 +65,15 @@ class AutoPartsChatbot:
         }
         self.last_recommended_part = None
         self.oops_count = 0
-        self.help_shown = False
         self.clf_conf = 0.0
         self.consecutive_fallbacks = 0
         self.turns_since_valid_context = 0
         self.pending_part_category = None
         self.pending_part_count = 0
+        self.booking_attempts = 0
+        self.last_response = None
+        self.friendly_mode = False
+        self.last_sku_shown = None
     
     def reset_session(self):
         """Reset conversation session"""
@@ -73,6 +86,8 @@ class AutoPartsChatbot:
         self.invalid_turns = 0
         self.help_shown = False
         self.last_response_type = None
+        self.pending_install_lead = False
+        self.pending_action = None
         
         # Clear enhanced context memory
         self.slot_memory = {
@@ -82,93 +97,15 @@ class AutoPartsChatbot:
             'last_search_successful': False
         }
         self.last_recommended_part = None
-        self.pending_install_lead = False
         self.oops_count = 0
-        self.help_shown = False
         self.consecutive_fallbacks = 0
         self.turns_since_valid_context = 0
         self.pending_part_category = None
         self.pending_part_count = 0
-        
-    def resolve_coref(self, text: str, ctx: dict) -> str:
-        """Resolve coreference expressions using slot memory"""
-        text_lower = text.lower().strip()
-        
-        COREF_PART = ["same part", "same one", "that part", "those", "it"]
-        COREF_VEH = ["same car", "same make", "that car", "that make", "my car"]
-        
-        resolved = text
-        
-        # Resolve part coreferences
-        if any(phrase in text_lower for phrase in COREF_PART) and ctx.get('part_category'):
-            for phrase in COREF_PART:
-                if phrase in text_lower:
-                    resolved = resolved.replace(phrase, ctx['part_category'])
-                    break
-        
-        # Resolve vehicle coreferences
-        if any(phrase in text_lower for phrase in COREF_VEH) and ctx.get('vehicle_make'):
-            resolved = f"{resolved} {ctx['vehicle_make']}"
-        
-        return resolved
-    
-    def is_toxic(self, message: str) -> bool:
-        """Check for toxic language using simple keyword detection"""
-        toxic_keywords = [
-            'fuck', 'shit', 'damn', 'bitch', 'asshole', 'stupid', 'idiot', 
-            'moron', 'dumb', 'retard', 'hate', 'kill', 'die'
-        ]
-        message_lower = message.lower()
-        return any(keyword in message_lower for keyword in toxic_keywords)
-    
-    def get_dynamic_stock_alternatives(self, part_category: str) -> List[str]:
-        """Get real makes with inventory for given category"""
-        if self.products_df.empty:
-            return []
-        
-        canon_category = self.normalize_category(part_category)
-        available_makes = self.products_df[
-            (self.products_df['Category'].str.lower() == canon_category.lower()) &
-            (self.products_df['Availability'].isin(['In Stock', 'Limited']))
-        ]['VehicleMake'].unique().tolist()
-        
-        return available_makes[:5]  # Return first 5 makes with stock
-    
-    def load_faq(self) -> List[Dict]:
-        try:
-            with open('data/faq.json', 'r') as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"Warning: Could not load FAQ data: {e}")
-            return []
-    
-    def load_synonyms(self) -> Dict[str, str]:
-        synonyms = {}
-        try:
-            with open('data/category_synonyms.csv', 'r') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    if 'Synonym' in row and 'CategoryName' in row:
-                        synonyms[row['Synonym'].lower()] = row['CategoryName']
-        except (FileNotFoundError, csv.Error) as e:
-            print(f"Warning: Could not load synonyms: {e}")
-        return synonyms
-    
-    def load_install_tips(self) -> Dict:
-        try:
-            with open('data/install_tips.json', 'r') as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"Warning: Could not load install tips: {e}")
-            return {}
-    
-    def load_install_times(self) -> Dict:
-        try:
-            times_df = pd.read_csv('data/install_times.csv')
-            return dict(zip(times_df['Category'], times_df['Minutes']))
-        except (FileNotFoundError, pd.errors.EmptyDataError) as e:
-            print(f"Warning: Could not load install times: {e}")
-            return {}
+        self.booking_attempts = 0
+        self.last_response = None
+        self.friendly_mode = False
+        self.last_sku_shown = None
     
     def get_available_makes(self) -> List[str]:
         """Get available vehicle makes from products data"""
@@ -176,62 +113,34 @@ class AutoPartsChatbot:
             return ['Honda', 'Toyota', 'Ford', 'BMW', 'Nissan', 'Chevrolet', 'Subaru', 'Audi', 'Volkswagen', 'Jeep', 'Mercedes-Benz']
         return sorted(self.products_df['VehicleMake'].unique().tolist())
     
-    def load_vehicle_synonyms(self) -> Dict[str, str]:
-        """Load vehicle make synonyms for typo correction"""
-        # Common typos and abbreviations (avoid short ambiguous words)
-        vehicle_synonyms = {
-            'hond': 'Honda',
-            'honda': 'Honda',
-            'toyta': 'Toyota', 
-            'toyota': 'Toyota',
-            'ford': 'Ford',  # Keep but handle carefully
-            'nissan': 'Nissan',
-            'bmw': 'BMW',
-            'chevy': 'Chevrolet',
-            'chevrolet': 'Chevrolet',
-            'subaru': 'Subaru',
-            'audi': 'Audi',
-            'volkswagen': 'Volkswagen',
-            'jeep': 'Jeep',
-            'mercedes': 'Mercedes-Benz',
-            'mercedes-benz': 'Mercedes-Benz'
+    def get_dynamic_stock_alternatives(self, part_category: str) -> List[str]:
+        """Get real makes with inventory for given category"""
+        if self.products_df.empty:
+            return []
+        
+        canon_category = normalize_category(part_category, self.synonyms)
+        available_makes = self.products_df[
+            (self.products_df['Category'].str.lower() == canon_category.lower()) &
+            (self.products_df['Availability'].isin(['In Stock', 'Limited']))
+        ]['VehicleMake'].unique().tolist()
+        
+        return available_makes[:5]
+    
+    def get_display_category(self, category: str) -> str:
+        """Get user-friendly display name for category"""
+        canon = normalize_category(category, self.synonyms)
+        
+        display_map = {
+            'Spark Plugs': 'spark plugs',
+            'Electrical': 'electrical parts',
+            'Engine Oil': 'engine oil',
+            'Fuel System': 'fuel system parts',
+            'Accessories': 'accessories',
+            'Lighting': 'lights',
+            'Performance': 'performance parts'
         }
-        return vehicle_synonyms
-    
-    def init_leads_file(self):
-        try:
-            pd.read_csv(self.leads_file)
-        except FileNotFoundError:
-            try:
-                df = pd.DataFrame(columns=['timestamp', 'name', 'phone', 'email', 'vehicle_make', 'part_category', 'message'])
-                df.to_csv(self.leads_file, index=False)
-            except Exception as e:
-                print(f"Warning: Could not create leads file: {e}")
-    
-    def normalize_category(self, category: str) -> str:
-        if not category:
-            return ""
         
-        category_lower = category.lower().strip()
-        
-        # First check exact match in synonyms
-        if category_lower in self.synonyms:
-            canon_name = self.synonyms[category_lower]
-            # Return canonical category name (already clean)
-            return canon_name
-        
-        # Use fuzzy matching for typos with score cutoff
-        synonym_keys = list(self.synonyms.keys())
-        if synonym_keys:
-            match = process.extractOne(category_lower, synonym_keys, scorer=fuzz.ratio, score_cutoff=70)
-            if match:
-                canon_name = self.synonyms[match[0]]
-                # Return canonical category name (already clean)
-                return canon_name
-        
-        # Fallback to cleaned original category
-        cleaned = category_lower.title().replace(" parts", "").replace(" Parts", "")
-        return cleaned
+        return display_map.get(canon, canon.lower())
     
     def get_available_categories_for_vehicle(self, vehicle_make: str) -> List[str]:
         """Get list of available part categories for a specific vehicle"""
@@ -241,7 +150,6 @@ class AutoPartsChatbot:
         vehicle_parts = self.products_df[self.products_df['VehicleMake'].str.lower() == vehicle_make.lower()]
         categories = vehicle_parts['Category'].unique().tolist()
         
-        # Convert to display names
         display_categories = []
         for cat in categories:
             display_name = self.get_display_category(cat)
@@ -269,12 +177,10 @@ class AutoPartsChatbot:
         elif 'light' in part_lower:
             return 20
         else:
-            return 45  # Default
+            return 45
     
     def handle_installation_request(self, message: str) -> str:
         """Handle installation-related queries with context preservation"""
-        message_lower = message.lower()
-        
         # Check current session context first
         if self.session_vehicle and self.session_part:
             minutes = self.get_install_time_minutes(self.session_part)
@@ -296,433 +202,18 @@ class AutoPartsChatbot:
         # Generic installation query without context
         return "I'd be happy to help with installation! What part are you looking to install? I can provide timing estimates and arrange professional installation."
     
-    def get_display_category(self, category: str) -> str:
-        """Get user-friendly display name for category"""
-        canon = self.normalize_category(category)
-        
-        # Map internal categories to user-friendly names
-        display_map = {
-            'Spark Plugs': 'spark plugs',
-            'Electrical': 'electrical parts',
-            'Engine Oil': 'engine oil',
-            'Fuel System': 'fuel system parts',
-            'Accessories': 'accessories',
-            'Lighting': 'lights',
-            'Performance': 'performance parts'
-        }
-        
-        return display_map.get(canon, canon.lower())
-    
-    def normalize_make(self, make_input: str) -> Optional[str]:
-        """Normalize vehicle make with fuzzy matching for typos"""
-        if not make_input:
-            return None
-        
-        make_lower = make_input.lower().strip()
-        
-        # First check exact match in synonyms
-        if make_lower in self.vehicle_synonyms:
-            return self.vehicle_synonyms[make_lower]
-        
-        # Use fuzzy matching against synonym keys (includes typos)
-        synonym_keys = list(self.vehicle_synonyms.keys())
-        if synonym_keys:
-            match = process.extractOne(make_lower, synonym_keys, 
-                                    scorer=fuzz.ratio, score_cutoff=70)
-            if match:
-                return self.vehicle_synonyms[match[0]]
-        
-        return None
-    
-    def detect_multi_query(self, message: str) -> bool:
-        """Detect if message contains multiple vehicle/part queries"""
-        separators = [' or ', ' OR ', ' and ', ' AND ', ' & ', ', ']
-        return any(sep in message for sep in separators)
-    
-    def split_multi_query(self, message: str) -> List[str]:
-        """Split multi-query message into individual queries"""
-        import re
-        # Split on common separators
-        parts = re.split(r'\s+(?:or|OR|and|AND|&|,)\s+', message)
-        return [part.strip() for part in parts if part.strip()]
-    
-    def extract_vehicle_and_part(self, message: str) -> Tuple[Optional[str], Optional[str]]:
-        message_lower = message.lower().strip()
-        words = message_lower.split()
-        
-        # Extract vehicle make with fuzzy matching (skip very short words)
-        vehicle_make = None
-        for word in words:
-            if len(word) >= 4:  # Skip short words like "my", "for", "the"
-                normalized_make = self.normalize_make(word)
-                if normalized_make:
-                    vehicle_make = normalized_make
-                    break
-        
-        # If no match with length >= 4, try exact matches for shorter words
-        if not vehicle_make:
-            for word in words:
-                if word in self.vehicle_synonyms:
-                    vehicle_make = self.vehicle_synonyms[word]
-                    break
-        
-        # Also check for unsupported but recognizable vehicle makes
-        if not vehicle_make:
-            unsupported_makes = ['ferrari', 'lamborghini', 'maserati', 'bugatti', 'mclaren', 'porsche', 'tesla']
-            for word in words:
-                if word.lower() in unsupported_makes:
-                    vehicle_make = word.title()  # Return as-is for unsupported make handling
-                    break
-        
-        # Extract part category with improved matching
-        part_category = None
-        
-        # First try exact synonym matches
-        for word in words:
-            if word in self.synonyms:
-                part_category = self.synonyms[word]
-                break
-        
-        # Then try fuzzy matching for typos
-        if not part_category:
-            for word in words:
-                if len(word) > 3:  # Skip very short words
-                    synonym_keys = list(self.synonyms.keys())
-                    if synonym_keys:
-                        match = process.extractOne(word, synonym_keys, scorer=fuzz.ratio, score_cutoff=70)
-                        if match:
-                            part_category = self.synonyms[match[0]]
-                            break
-        
-        # Guard against keyword collisions (e.g., "starter parts" -> "start")
-        if part_category and 'starter' in part_category.lower():
-            # Only match if "starter" appears as whole word, not substring
-            if not any(word == 'starter' for word in words):
-                part_category = None
-        
-        return vehicle_make, part_category
-    
-    def search_parts(self, vehicle_make: str, part_category: str) -> List[Dict]:
-        if self.products_df.empty:
-            return []
-        
-        try:
-            # Normalize category using fuzzy matching
-            canon_category = self.normalize_category(part_category)
-            
-            # Strategy 1: Exact match
-            matches = self.products_df[
-                (self.products_df['VehicleMake'].str.lower() == vehicle_make.lower()) &
-                (self.products_df['Category'].str.lower() == canon_category.lower())
-            ]
-            
-            # Strategy 2: Startswith match (handles pluralization)
-            if matches.empty:
-                matches = self.products_df[
-                    (self.products_df['VehicleMake'].str.lower() == vehicle_make.lower()) &
-                    (self.products_df['Category'].str.lower().str.startswith(canon_category.lower()))
-                ]
-            
-            # Strategy 3: Category contains canon_category
-            if matches.empty:
-                matches = self.products_df[
-                    (self.products_df['VehicleMake'].str.lower() == vehicle_make.lower()) &
-                    (self.products_df['Category'].str.contains(canon_category, case=False, na=False))
-                ]
-            
-            # Strategy 4: Fuzzy match on category names
-            if matches.empty:
-                vehicle_parts = self.products_df[
-                    self.products_df['VehicleMake'].str.lower() == vehicle_make.lower()
-                ]
-                
-                if not vehicle_parts.empty:
-                    categories = vehicle_parts['Category'].unique()
-                    fuzzy_match = process.extractOne(canon_category.lower(), 
-                                                   [cat.lower() for cat in categories], 
-                                                   scorer=fuzz.ratio, score_cutoff=60)
-                    if fuzzy_match:
-                        matched_category = categories[[cat.lower() for cat in categories].index(fuzzy_match[0])]
-                        matches = vehicle_parts[
-                            vehicle_parts['Category'].str.lower() == matched_category.lower()
-                        ]
-            
-            return matches.to_dict('records')
-        except Exception as e:
-            print(f"Error in search_parts: {e}")
-            return []
-    
-    def detect_intent(self, message: str) -> str:
-        """Detect user intent with proper priority after lead capture"""
-        message_lower = message.lower().strip()
-        
-        # Check for gibberish/unknown (very short or meaningless)
-        words = [w for w in message_lower.split() if len(w) > 1]
-        if len(words) == 0:
-            return 'unknown'
-        
-        # FAQ patterns (HIGHEST priority - always check first)
-        faq_keywords = ['hours', 'open', 'close', 'return', 'refund', 'ship', 'payment', 'warranty', 'call', 'phone', 'contact', 'pay']
-        if any(keyword in message_lower for keyword in faq_keywords):
-            return 'faq'
-        
-        # Installation/Service intent (HIGH priority)
-        install_keywords = ['install', 'installation', 'fit', 'fitting', 'replace', 'service', 'how long', 'appointment', 'booking', 'how do i put', 'do you do the install', 'how to install', 'install myself', 'when can i']
-        if any(keyword in message_lower for keyword in install_keywords):
-            return 'installation'
-        
-        # Car sales intent (out of scope)
-        sales_keywords = ['buy a new car', 'purchase vehicle', 'new car', 'buying a car', 'car dealership']
-        if any(keyword in message_lower for keyword in sales_keywords):
-            return 'car_sales'
-        
-        # Chitchat patterns (HIGH priority - before lead capture)
-        chitchat_patterns = [
-            'who are you', 'what are you', 'how are you', 'how is your day', 'how is you day',
-            'how\'s your day', 'how is the weather', 'how\'s the weather', 'how\'s your week',
-            'how is your week', 'how are things', 'how\'s it going', 'what\'s up', 'whats up',
-            'what\'s the weather', 'weather', 'thanks', 'thank you',
-            'hello', 'hi', 'hey', 'good morning', 'good afternoon', 
-            'how is', 'nice to meet', 'goodbye', 'bye', 'good', 'great', 'awesome', 
-            'nice', 'cool', 'perfect', 'excellent', 'not bad', 'sounds good', 'that\'s fine', 'thats fine', 'no worries'
-        ]
-        
-        # Check for exact word matches for short chitchat
-        short_chitchat = ['ok', 'kk', 'hi', 'hey', 'thanks', 'bye', 'good', 'great', 'nice', 'cool']
-        if message_lower in short_chitchat:
-            return 'chitchat'
-        
-        # Check for longer chitchat patterns
-        if any(pattern in message_lower for pattern in chitchat_patterns):
-            return 'chitchat'
-        
-        # Product queries (HIGH priority - before lead capture)
-        vehicle, part = self.extract_vehicle_and_part(message)
-        if vehicle or part:
-            return 'product'
-        
-        # Lead capture patterns (LOWER priority - only if actively in lead flow)
-        if self.awaiting_lead_capture or self.lead_capture_step or self.pending_install_lead:
-            # Check for installation booking responses
-            if self.pending_install_lead and any(word in message_lower for word in ['yes', 'ok', 'sure', 'book', 'arrange', 'contact']):
-                return 'lead'
-            elif self.awaiting_lead_capture or self.lead_capture_step:
-                return 'lead'
-        
-        # If no meaningful content found
-        return 'unknown'
-    
-    def check_faq(self, message: str) -> Optional[str]:
-        message_lower = message.lower()
-        
-        # Enhanced FAQ matching with modern structure
-        best_match = None
-        highest_score = 0
-        
-        for faq in self.faq_data:
-            score = 0
-            
-            # Check keywords with priority weighting
-            if 'keywords' in faq:
-                for keyword in faq['keywords']:
-                    if keyword in message_lower:
-                        # Higher score for high-priority FAQs
-                        weight = 2 if faq.get('priority') == 'high' else 1
-                        score += weight
-            
-            # Direct question matching
-            if any(word in faq['question'].lower() for word in message_lower.split()):
-                score += 1
-            
-            if score > highest_score:
-                highest_score = score
-                best_match = faq
-        
-        return best_match['answer'] if best_match and highest_score > 0 else None
-    
-    def extract_contact_info(self, contact_text: str) -> tuple[str, str]:
-        """Extract phone and email from contact text"""
-        phone = ''
-        email = ''
-        
-        # Handle "both" or combined responses
-        if 'both' in contact_text.lower():
-            return '', ''  # Will trigger re-ask
-        
-        # Extract phone number patterns
-        phone_match = re.search(r'(\+?\d{1,3}[-.\s]?\(?\d{3,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}|\d{10})', contact_text)
-        if phone_match:
-            phone = phone_match.group(1)
-        
-        # Extract email patterns
-        email_match = re.search(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', contact_text)
-        if email_match:
-            email = email_match.group(1)
-        
-        return phone, email
-    
-    def save_lead_with_service(self, name: str, contact: str, vehicle_make: str, part_category: str, original_message: str, service_requested: bool = False):
-        try:
-            phone, email = self.extract_contact_info(contact)
-            
-            lead_data = {
-                'timestamp': datetime.now().isoformat(),
-                'name': name,
-                'phone': phone,
-                'email': email,
-                'vehicle_make': vehicle_make or '',
-                'part_category': part_category or '',
-                'message': original_message,
-                'service_requested': service_requested
-            }
-            
-            df = pd.read_csv(self.leads_file)
-            new_row = pd.DataFrame([lead_data])
-            df = pd.concat([df, new_row], ignore_index=True)
-            df.to_csv(self.leads_file, index=False)
-            
-            # CRITICAL: Clear ALL lead capture state after successful save
-            self.awaiting_lead_capture = False
-            self.lead_capture_step = None
-            self.lead_name = None
-            self.conversation_handled = True
-            self.last_response_type = None
-            
-        except Exception as e:
-            print(f"Warning: Could not save lead: {e}")
-    
-    def save_lead(self, name: str, contact: str, vehicle_make: str, part_category: str, original_message: str):
-        """Backward compatibility wrapper"""
-        self.save_lead_with_service(name, contact, vehicle_make, part_category, original_message, False)
-    
-    def call_groq_api(self, message: str, context: str = "") -> str:
-        # Return mock response during testing
-        if not self.groq_api_key:
-            return "I'm here to help with auto parts. What can I find for you?"
-            
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.groq_api_key}"
-        }
-        
-        system_prompt = """You are a helpful auto parts store assistant. Be concise and professional (max 2 sentences). 
-        Always guide customers to provide vehicle make and part type for searches.
-        Available makes: Honda, Toyota, Ford, BMW, Nissan, Chevrolet, Subaru, Audi, Volkswagen, Jeep, Mercedes-Benz
-        Common parts: battery, tires, brakes, oil, filters, spark plugs, suspension, lights"""
-        
-        if context:
-            system_prompt += f"\n\n{context}"
-        
-        data = {
-            "model": "llama3-8b-8192",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": message}
-            ],
-            "max_tokens": 100,
-            "temperature": 0.5
-        }
-        
-        try:
-            response = requests.post(url, headers=headers, json=data, timeout=10)
-            if response.status_code == 200:
-                return response.json()['choices'][0]['message']['content']
-            else:
-                return "I'm having trouble connecting right now. Please try again or contact us directly at our store."
-        except Exception as e:
-            return "I'm experiencing technical difficulties. Please contact our store directly for assistance."
-    
-    def format_parts_with_llm(self, parts: List[Dict], vehicle: str, part_type: str) -> str:
-        """Use LLM to create friendly summary of search results"""
-        if not parts:
-            return "No parts found matching your criteria."
-        
-        # Sort by availability
-        availability_order = {'In Stock': 0, 'Limited': 1, 'Out of Stock': 2}
-        sorted_parts = sorted(parts, key=lambda x: availability_order.get(x['Availability'], 3))
-        
-        # Create compact JSON payload for LLM
-        parts_data = []
-        for part in sorted_parts[:3]:  # Limit to top 3 for LLM
-            parts_data.append({
-                "name": part['PartName'],
-                "sku": part['SKU'],
-                "price": part['Price'],
-                "availability": part['Availability'],
-                "vehicle": f"{part['VehicleMake']} {part['VehicleModel']}",
-                "years": part['YearRange']
-            })
-        
-        # LLM context with structured data
-        context = f"""Customer searched for {part_type} parts for {vehicle}. 
-        Found {len(sorted_parts)} results. Here are the top matches:
-        {json.dumps(parts_data, indent=2)}
-        
-        Create a friendly, helpful response that:
-        1. Mentions we found parts for their {vehicle}
-        2. Highlights the best available option
-        3. Includes key details (price, availability, SKU)
-        4. Keeps it concise (2-3 sentences max)"""
-        
-        llm_response = self.call_groq_api(f"Summarize these {part_type} parts for {vehicle}", context)
-        
-        # Add structured details after LLM summary
-        details = "\n\n📋 **Details:**\n"
-        for part in sorted_parts[:3]:
-            availability = part['Availability']
-            status_emoji = "✅" if availability == "In Stock" else "⚠️" if availability == "Limited" else "❌"
-            details += f"{status_emoji} {part['PartName']} - SKU: {part['SKU']} | ${part['Price']} | {availability}\n"
-        
-        if len(sorted_parts) > 3:
-            details += f"\n... and {len(sorted_parts) - 3} more available."
-        
-        return llm_response + details
-    
-    def format_parts_response(self, parts: List[Dict]) -> str:
-        """Fallback formatting without LLM"""
-        if not parts:
-            return "No parts found matching your criteria."
-        
-        # Sort by availability (In Stock first, then Limited, then Out of Stock)
-        availability_order = {'In Stock': 0, 'Limited': 1, 'Out of Stock': 2}
-        sorted_parts = sorted(parts, key=lambda x: availability_order.get(x['Availability'], 3))
-        
-        response = f"Found {len(sorted_parts)} part(s):\n\n"
-        
-        for part in sorted_parts[:5]:  # Limit to 5 results
-            availability = part['Availability']
-            status_emoji = "✅" if availability == "In Stock" else "⚠️" if availability == "Limited" else "❌"
-            
-            response += f"{status_emoji} **{part['PartName']}**\n"
-            response += f"   SKU: {part['SKU']} | Price: ${part['Price']} | {availability}\n"
-            response += f"   Fits: {part['VehicleMake']} {part['VehicleModel']} ({part['YearRange']})\n\n"
-        
-        if len(sorted_parts) > 5:
-            response += f"... and {len(sorted_parts) - 5} more parts available.\n"
-        
-        return response
-    
     def process_message(self, message: str, history: List) -> str:
+        """Main message processing function"""
         if not message.strip():
             return "How can I help you find auto parts today?"
         
-        # Handle toxic language with de-escalation while preserving context
-        if self.is_toxic(message):
-            if self.session_vehicle and self.session_part:
-                return f"I'm here to help with auto parts - let's keep our conversation respectful. I was helping you with {self.session_vehicle} {self.session_part.lower()}. Do you need installation help or have other questions?"
-            elif self.session_part:
-                return f"I'm here to help with auto parts - let's keep our conversation respectful. You were looking for {self.session_part.lower()}. Which vehicle make do you need?"
-            return "I'm here to help with auto parts - let's keep our conversation respectful. What vehicle and part can I help you find?"
-        
         # Check for multi-item queries first
-        if self.detect_multi_query(message):
-            queries = self.split_multi_query(message)
+        if detect_multi_query(message):
+            queries = split_multi_query(message)
             if len(queries) > 1:
-                # Handle multiple queries
                 query_summaries = []
-                for query in queries[:2]:  # Limit to 2 queries
-                    vehicle, part = self.extract_vehicle_and_part(query)
+                for query in queries[:2]:
+                    vehicle, part = extract_vehicle_and_part(query, self.vehicle_synonyms, self.synonyms)
                     if vehicle and part:
                         query_summaries.append(f"{vehicle} {part}")
                     elif vehicle:
@@ -734,10 +225,28 @@ class AutoPartsChatbot:
                     return f"I see you're asking about multiple items: {' and '.join(query_summaries)}. Which one would you like me to help with first?"
         
         # Resolve coreferences before processing
-        resolved_message = self.resolve_coref(message, self.slot_memory)
+        resolved_message = resolve_coref(message, self.slot_memory)
         
         # Detect intent on resolved message
-        intent = self.detect_intent(resolved_message)
+        intent = detect_intent(resolved_message)
+        
+        # Handle abuse with proper de-escalation (no product fallback)
+        if intent == 'abuse':
+            return "I'm here to assist with auto parts. Let's keep our conversation respectful and professional. How can I help you find the right parts for your vehicle?"
+        
+        # Handle nonsense/absurd requests (no product extraction)
+        if intent == 'nonsense':
+            return "I'm here to help with auto parts for your vehicle. Could you let me know what specific part you're looking for?"
+        
+        # Handle callback requests
+        if intent == 'callback_request':
+            self.awaiting_lead_capture = True
+            return "I'd be happy to arrange a callback for you! May I have your name and phone number so our team can reach out?"
+        
+        # Handle promotions/specials requests
+        if intent == 'promotions':
+            vehicle_context = f" for your {self.session_vehicle}" if self.session_vehicle else ""
+            return f"Great question! We currently have special pricing on lighting and suspension parts{vehicle_context}. What specific part are you interested in?"
         
         # Handle unknown with escalation safety
         if intent == 'unknown':
@@ -760,7 +269,7 @@ class AutoPartsChatbot:
             if self.clf_conf < 0.4:
                 try:
                     system_prompt = "If user's request is outside auto-parts (weather, politics, etc.), reply politely in ≤2 sentences, then steer back: 'I can help you find parts or store info—just tell me make + part.'"
-                    llm_response = self.call_groq_api(message, system_prompt)
+                    llm_response = call_groq_api(self.groq_api_key, message, system_prompt)
                     return llm_response
                 except:
                     pass
@@ -772,36 +281,71 @@ class AutoPartsChatbot:
             self.oops_count = 0
             self.consecutive_fallbacks = 0
         
-        # Handle chitchat with proper responses (don't count as invalid)
+        # Handle chitchat with enhanced friendly responses
         if intent == 'chitchat':
             self.conversation_handled = True
             self.last_response_type = 'chitchat'
-            # Don't increment invalid_turns for chitchat
             message_lower = message.lower()
+            
+            # Handle friendship/tone requests
+            if any(pattern in message_lower for pattern in ['friend', 'speak.*friend', 'talk.*friend', 'cold', 'warm']):
+                self.friendly_mode = True
+                return "You got it! I'm here to help you out with whatever you need for your ride. What's going on with your car today? 😊"
+            
+            # Handle "does that mean" questions
+            if 'does that mean' in message_lower:
+                if self.friendly_mode:
+                    return "Yeah, I'm all good and ready to help! What can I find for your car?"
+                else:
+                    return "Yes, I'm ready to help! What auto parts do you need?"
             
             # Handle thanks and end session
             if any(word in message_lower for word in ['thanks', 'thank you', 'cheers']):
                 self.reset_session()
-                return "You're welcome! Feel free to come back anytime you need auto parts help."
+                response = "You're welcome!" if not self.friendly_mode else "No worries, buddy!"
+                return f"{response} Feel free to come back anytime you need auto parts help."
             
-            # Handle typos in common chitchat (fuzzy matching)
-            if any(pattern in message_lower for pattern in ['how is you day', 'how is your day', 'how\'s your day']):
-                return "Thanks for asking! I'm here and ready to help. What auto parts can I find for you today?"
+            # Handle common chitchat patterns with friendly mode
+            if any(pattern in message_lower for pattern in ['how is you day', 'how is your day', "how's your day"]):
+                if self.friendly_mode:
+                    return "Thanks for asking! I'm doing great and ready to help you out. What's your car needing today?"
+                else:
+                    return "Thanks for asking! I'm here and ready to help. What auto parts can I find for you today?"
             elif 'weather' in message_lower:
                 return "I don't have live weather info, but I can help with parts. What vehicle and part are you looking for?"
             elif 'who are you' in message_lower or 'what are you' in message_lower:
-                return "I'm your auto parts assistant! I help customers find the right parts for their vehicles. What can I help you find?"
+                if self.friendly_mode:
+                    return "I'm your auto parts buddy! I help find the perfect parts for your ride. What do you need?"
+                else:
+                    return "I'm your auto parts assistant! I help customers find the right parts for their vehicles. What can I help you find?"
             elif 'how are you' in message_lower:
-                return "I'm doing great, thanks for asking! How can I help you with auto parts today?"
-            elif any(phrase in message_lower for phrase in ['how\'s your week', 'how is your week', 'how are things', 'how\'s it going', 'what\'s up', 'whats up']):
-                return "Things are going well, thanks for asking! I'm here to help you find the right auto parts. What can I help you with?"
+                if self.friendly_mode:
+                    return "I'm doing awesome, thanks for asking! How can I help with your car today?"
+                else:
+                    return "I'm doing great, thanks for asking! How can I help you with auto parts today?"
+            elif any(phrase in message_lower for phrase in ["how's your week", 'how is your week', 'how are things', "how's it going", "what's up", 'whats up']):
+                if self.friendly_mode:
+                    return "Things are going great, thanks! Ready to help you get your car sorted. What's up?"
+                else:
+                    return "Things are going well, thanks for asking! I'm here to help you find the right auto parts. What can I help you with?"
             elif any(greeting in message_lower for greeting in ['hi', 'hello', 'hey', 'good morning', 'good afternoon']):
-                return "Hello! Welcome to our auto parts store. I can help you find parts for your vehicle. Just tell me your car make and what part you need (e.g., 'Honda battery' or 'Toyota tires')."
-            elif message_lower in ['ok', 'kk']:
+                if self.friendly_mode:
+                    return "Hey there! What's your car needing today? Just tell me the make and part (like 'Honda battery')."
+                else:
+                    return "Hello! Welcome to our auto parts store. I can help you find parts for your vehicle. Just tell me your car make and what part you need (e.g., 'Honda battery' or 'Toyota tires')."
+            elif message_lower in ['ok', 'kk', '?', 'hmm']:
                 return "Sure! Let me know if you need anything."
-            # Handle casual acknowledgements
-            elif any(phrase in message_lower for phrase in ['good', 'great', 'awesome', 'nice', 'cool', 'perfect', 'excellent', 'that\'s fine', 'thats fine', 'no worries', 'sounds good', 'not bad']):
+            elif any(phrase in message_lower for phrase in ['good', 'great', 'awesome', 'nice', 'cool', 'perfect', 'excellent', "that's fine", 'thats fine', 'no worries', 'sounds good', 'not bad']):
                 return "Glad to help—anything else?"
+            elif 'why are you' in message_lower or 'cold' in message_lower:
+                return "I'm here to help you find auto parts. Is there something specific I can assist you with?"
+            elif 'other questions' in message_lower or 'other parts' in message_lower:
+                if self.session_vehicle:
+                    return f"Sure! I can show you other parts for your {self.session_vehicle}, or help with store info, installation services, etc. What interests you?"
+                else:
+                    return "Sure! I can help with parts searches, store information, installation services, or any other auto parts questions. What would you like to know?"
+            elif 'teach me' in message_lower or 'respect' in message_lower:
+                return "I'm just here to help with auto parts. What can I find for your vehicle today?"
             else:
                 return "How can I help you today?"
         
@@ -819,14 +363,18 @@ class AutoPartsChatbot:
         if intent == 'faq':
             self.conversation_handled = True
             self.last_response_type = 'faq'
-            faq_answer = self.check_faq(message)
+            faq_answer = check_faq(message, self.faq_data)
             if faq_answer:
-                # Don't immediately ask for parts after FAQ - wait for user's next input
                 return faq_answer
         
+        # Handle product intent explicitly
+        if intent == 'product':
+            # This will fall through to the product query handling below
+            pass
+        
         # Handle lead capture with 3-step flow
-        if intent == 'lead':
-            # Step 1: User agrees to lead capture (stock notification or installation)
+        if intent == 'lead' or self.awaiting_lead_capture or self.lead_capture_step or self.pending_install_lead:
+            # Step 1: User agrees to lead capture
             if (self.awaiting_lead_capture or self.pending_install_lead) and not self.lead_capture_step:
                 if any(word in message.lower() for word in ['yes', 'ok', 'sure', 'yeah', 'book', 'arrange']):
                     self.lead_capture_step = 'name'
@@ -834,71 +382,91 @@ class AutoPartsChatbot:
                 else:
                     self.awaiting_lead_capture = False
                     self.pending_install_lead = False
-                    # Check if this is actually a new product query
-                    new_vehicle, new_part = self.extract_vehicle_and_part(resolved_message)
+                    new_vehicle, new_part = extract_vehicle_and_part(resolved_message, self.vehicle_synonyms, self.synonyms)
                     if new_vehicle or new_part:
-                        # Handle as product query instead of generic response
                         if new_vehicle:
                             self.session_vehicle = new_vehicle
                         if new_part:
                             self.session_part = new_part
-                        # Continue to product query handling below
                     else:
                         return "No problem! Is there anything else I can help you find?"
             
-            # Step 2: Collect name
+            # Step 2: Collect name with validation
             elif self.lead_capture_step == 'name':
-                self.lead_name = message.strip()
+                name = message.strip()
+                if not is_valid_name(name):
+                    return "I need your name to proceed. Could you please provide your first and last name?"
+                self.lead_name = name
                 self.lead_capture_step = 'contact'
                 return f"Thanks, {self.lead_name}. Phone or email so we can reach you?"
             
-            # Step 3: Collect contact and save
+            # Step 3: Collect contact and save with better validation
             elif self.lead_capture_step == 'contact':
                 contact = message.strip()
                 
-                # Handle "both" or insufficient contact info
+                # Handle "both" request
                 if 'both' in contact.lower() and not re.search(r'\d{10}|@', contact):
                     return "I'd be happy to use both! Please provide your phone number and email address. For example: '0410 123 456 and john@email.com'"
                 
-                phone, email = self.extract_contact_info(contact)
+                # Extract contact details
+                contact_info = extract_contact_details(contact)
+                phone = contact_info['phone']
+                email = contact_info['email']
                 
-                # If neither phone nor email captured, ask again
-                if not phone and not email:
-                    return "I need either a phone number or email address to contact you. Could you provide one of those?"
+                # Validate contact details
+                valid_phone = phone and is_valid_phone(phone)
+                valid_email = email and is_valid_email(email)
                 
-                # Save the lead (preserve name before clearing state)
+                if not valid_phone and not valid_email:
+                    # Increment booking attempts to prevent infinite loops
+                    if not hasattr(self, 'booking_attempts'):
+                        self.booking_attempts = 0
+                    self.booking_attempts += 1
+                    
+                    if self.booking_attempts >= 3:
+                        # Reset booking flow after too many failed attempts
+                        self.awaiting_lead_capture = False
+                        self.lead_capture_step = None
+                        self.lead_name = None
+                        self.booking_attempts = 0
+                        return "It seems we're having trouble collecting your contact information. Would you like to start over or try a different approach?"
+                    
+                    return "I need a valid phone number or email address to contact you. Please provide a phone number (like 0410 123 456) or email address (like name@email.com)."
+                
+                # Save the lead with proper context preservation
                 name_to_thank = self.lead_name
                 part_name = self.session_part or self.last_recommended_part or 'parts'
+                vehicle_name = self.session_vehicle or 'your vehicle'
                 
-                # Determine lead type and save with service flag
+                # Reset booking attempts on success
+                self.booking_attempts = 0
+                
                 if self.pending_install_lead:
                     lead_message = f"Installation service for {part_name}"
                     response_message = f"✅ Perfect! Thanks {name_to_thank}, we'll have a certified technician contact you about {part_name} installation."
-                    self.save_lead_with_service(self.lead_name, contact, self.session_vehicle or "", part_name, lead_message, True)
+                    save_lead_with_service(self.leads_file, self.lead_name, contact, self.session_vehicle or "", part_name, lead_message, True)
                     self.pending_install_lead = False
                 else:
-                    lead_message = f"Requested {self.session_part} for {self.session_vehicle}"
+                    lead_message = f"Requested {part_name} for {vehicle_name}"
                     response_message = f"✅ Perfect! Thanks {name_to_thank}, we'll reach out soon about {part_name} availability."
-                    self.save_lead_with_service(self.lead_name, contact, self.session_vehicle or "", part_name, lead_message, False)
+                    save_lead_with_service(self.leads_file, self.lead_name, contact, self.session_vehicle or "", part_name, lead_message, False)
+                
+                # Clear lead capture state
+                self.awaiting_lead_capture = False
+                self.lead_capture_step = None
+                self.lead_name = None
+                self.conversation_handled = True
+                self.last_response_type = None
+                
                 return response_message
-            
-            # If awaiting lead capture but user asks about different part, handle as product query
-            if self.awaiting_lead_capture:
-                new_vehicle, new_part = self.extract_vehicle_and_part(resolved_message)
-                if new_part and new_part != self.session_part:
-                    # User asking about different part - reset lead capture and search
-                    self.awaiting_lead_capture = False
-                    self.lead_capture_step = None
-                    if new_vehicle:
-                        self.session_vehicle = new_vehicle
-                    if new_part:
-                        self.session_part = new_part
-                    # Continue to product query handling
-                else:
-                    return "I'd be happy to help you with lead capture. Please let me know if you'd like to be notified about part availability."
         
         # Handle product queries with improved context management
-        current_vehicle, current_part = self.extract_vehicle_and_part(resolved_message)
+        # This handles both explicit 'product' intent and fallthrough cases
+        current_vehicle, current_part = extract_vehicle_and_part(resolved_message, self.vehicle_synonyms, self.synonyms)
+        
+        # Debug logging
+        if current_vehicle or current_part:
+            print(f"DEBUG: Extracted vehicle='{current_vehicle}', part='{current_part}' from message='{resolved_message}'")
         
         # Reset lead capture on any new product query
         if current_vehicle or current_part:
@@ -917,68 +485,68 @@ class AutoPartsChatbot:
             self.reset_session()
             return "Let's start fresh! What vehicle and part can I help you find?"
         
-        # Slot persistence logic - merge new with existing, never wipe unless new value
+        # Slot persistence logic with debug
         if current_vehicle:
+            print(f"DEBUG: Setting session_vehicle to '{current_vehicle}'")
             self.session_vehicle = current_vehicle
             self.slot_memory['vehicle_make'] = current_vehicle
         elif self.slot_memory['vehicle_make']:
+            print(f"DEBUG: Using stored vehicle '{self.slot_memory['vehicle_make']}'")
             self.session_vehicle = self.slot_memory['vehicle_make']
         
         if current_part:
+            print(f"DEBUG: Setting session_part to '{current_part}'")
             self.session_part = current_part
             self.slot_memory['part_category'] = current_part
         elif self.slot_memory['part_category']:
+            print(f"DEBUG: Using stored part '{self.slot_memory['part_category']}'")
             self.session_part = self.slot_memory['part_category']
         
-        # Check if we have both vehicle and part (single-turn or accumulated)
+        print(f"DEBUG: Final state - vehicle='{self.session_vehicle}', part='{self.session_part}'")
+        
+        # Check if we have both vehicle and part
         if self.session_vehicle and self.session_part:
-            # Check if vehicle make is supported
+            print(f"DEBUG: Searching for {self.session_vehicle} {self.session_part}")
             supported_makes = ['Honda', 'Toyota', 'Ford', 'BMW', 'Nissan', 'Chevrolet', 'Subaru', 'Audi', 'Volkswagen', 'Jeep', 'Mercedes-Benz']
             if self.session_vehicle not in supported_makes:
                 return f"I'd love to help, but we don't currently stock parts for {self.session_vehicle}. We specialize in parts for: {', '.join(supported_makes[:5])}, and others. Would you like to check parts for a different vehicle?"
             
-            parts = self.search_parts(self.session_vehicle, self.session_part)
+            parts = search_parts(self.products_df, self.session_vehicle, self.session_part, self.synonyms)
+            print(f"DEBUG: Found {len(parts)} parts")
             if parts:
-                # Use hybrid orchestrator: LLM for friendly summary + structured data
                 try:
-                    response = self.format_parts_with_llm(parts, self.session_vehicle, self.session_part)
+                    response = format_parts_with_llm(self.groq_api_key, parts, self.session_vehicle, self.session_part)
                 except Exception as e:
-                    # Fallback to deterministic formatting if LLM fails
                     print(f"LLM formatting failed, using fallback: {e}")
-                    response = self.format_parts_response(parts)
+                    response = format_parts_response(parts)
                 
                 response += "\n\n💡 Need help with installation or have questions? Just ask!"
                 
-                # Update slot memory with SKU
+                # Check for repetitive SKU display
+                current_sku = parts[0].get('SKU', '') if parts else ''
+                if current_sku == self.last_sku_shown:
+                    return f"You already saw our top {self.session_part.lower()} option. Would you like to see other {self.session_part.lower()} choices or different parts for your {self.session_vehicle}?"
+                
+                # Update slot memory
                 self.slot_memory['last_search_successful'] = True
                 if parts:
-                    self.slot_memory['last_sku'] = parts[0].get('SKU', '')
+                    self.slot_memory['last_sku'] = current_sku
+                    self.last_sku_shown = current_sku
                 self.last_recommended_part = self.session_part
-                self.reset_session()
+                # Don't reset session immediately - keep context for follow-up questions
                 return response
             else:
-                # Graceful stock-out handling with alternatives
+                # Graceful stock-out handling
                 canon_category = self.get_display_category(self.session_part)
-                
-                # Check if we have this category for other vehicles (suggest alternatives)
-                alternative_parts = []
-                for make in supported_makes[:3]:  # Check top 3 makes
-                    if make != self.session_vehicle:
-                        alt_parts = self.search_parts(make, self.session_part)
-                        if alt_parts:
-                            alternative_parts.append(make)
                 
                 response = f"Sorry, we don't currently have {canon_category} for {self.session_vehicle} in stock."
                 
-                if alternative_parts:
-                    response += f"\n\n🔄 However, we do have {canon_category} available for: {', '.join(alternative_parts)}."
-                
-                response += f"\n\n📞 Would you like us to notify you when {self.session_vehicle} {canon_category} become available?"
-                
-                # Dynamic stock-out alternatives (single list)
+                # Dynamic stock-out alternatives
                 alternatives = self.get_dynamic_stock_alternatives(self.session_part)
                 if alternatives:
                     response += f"\n\n🔄 However, we do have {canon_category} for: {', '.join(alternatives)}."
+                
+                response += f"\n\n📞 Would you like us to notify you when {self.session_vehicle} {canon_category} become available?"
                 
                 self.slot_memory['last_search_successful'] = False
                 self.awaiting_lead_capture = True
@@ -991,7 +559,6 @@ class AutoPartsChatbot:
             if self.pending_part_category == self.session_part:
                 self.pending_part_count += 1
                 if self.pending_part_count >= 2:
-                    # Reset and offer lead capture after 2 repetitions
                     self.pending_part_category = None
                     self.pending_part_count = 0
                     self.awaiting_lead_capture = True
@@ -1000,13 +567,12 @@ class AutoPartsChatbot:
                 self.pending_part_category = self.session_part
                 self.pending_part_count = 1
             
-            # Check if the part category is something we actually stock
+            # Check if the part category is something we stock
             canon_category = self.get_display_category(self.session_part)
             
-            # Check if we have any parts in this category across all vehicles
             has_category = False
             for make in ['Honda', 'Toyota', 'Ford', 'BMW', 'Nissan']:
-                if self.search_parts(make, self.session_part):
+                if search_parts(self.products_df, make, self.session_part, self.synonyms):
                     has_category = True
                     break
             
@@ -1016,9 +582,8 @@ class AutoPartsChatbot:
             makes = self.get_available_makes()
             return f"I can help you find {canon_category} for various vehicles! Which make do you need them for?\n\nAvailable makes: {', '.join(makes)}"
         
-        # If we have vehicle but no part, ask for part or show available categories
+        # If we have vehicle but no part, ask for part
         if self.session_vehicle and not self.session_part:
-            # Check if user asked "what else" - show categories available for this vehicle
             if 'what else' in resolved_message.lower() or 'what other' in resolved_message.lower():
                 available_categories = self.get_available_categories_for_vehicle(self.session_vehicle)
                 if available_categories:
@@ -1027,73 +592,21 @@ class AutoPartsChatbot:
             parts = sorted(['battery', 'tires', 'brakes', 'oil', 'filters', 'spark plugs', 'suspension', 'lights'])
             return f"Perfect! I can help you find parts for your {self.session_vehicle}. What type of part do you need?\n\nPopular parts: {', '.join(parts)}"
         
-        # Enhanced default guidance with better context
-        current_vehicle_final, current_part_final = self.extract_vehicle_and_part(resolved_message)
+        # Enhanced default guidance
+        current_vehicle_final, current_part_final = extract_vehicle_and_part(resolved_message, self.vehicle_synonyms, self.synonyms)
         if current_vehicle_final and not current_part_final:
-            # User mentioned a vehicle but no recognizable part
             return f"I can help you find parts for your {current_vehicle_final}! What type of part do you need?\n\nPopular categories: battery, tires, brakes, oil, filters, spark plugs, suspension, lights"
         elif current_part_final and not current_vehicle_final:
-            # User mentioned a part but no recognizable vehicle
             canon_category = self.get_display_category(current_part_final)
-            return f"I can help you find {canon_category}! Which vehicle make do you need them for?\n\nSupported makes: Honda, Toyota, Ford, BMW, Nissan, Chevrolet, Subaru, Audi, Volkswagen, Jeep, Mercedes-Benz"
+            return f"I can help you find {canon_category}! Which vehicle make do you need them for?\\n\\nSupported makes: Honda, Toyota, Ford, BMW, Nissan, Chevrolet, Subaru, Audi, Volkswagen, Jeep, Mercedes-Benz"
         
-        # Default guidance (only if not handled by other intents)
+        # Default guidance (avoid repetitive product responses)
+        if intent == 'unknown' and self.last_response_type == 'product':
+            return "I'm not sure I understand. Could you clarify what you're looking for? I can help with parts searches, store info, or installation services."
+        
         return "I'd be happy to help you find auto parts! Please tell me:\n1. Your vehicle make (Honda, Toyota, etc.)\n2. What part you need (battery, tires, brakes, etc.)\n\nFor example: 'Honda battery' or 'Toyota tires'"
 
-# Initialize chatbot
-chatbot = AutoPartsChatbot()
-
-# Remove old chat_interface function as it's now handled in the Blocks layout
-
-def format_response_with_copyable_skus(response):
-    """Make SKUs copyable by wrapping in backticks"""
-    import re
-    sku_pattern = r'SKU: ([A-Za-z0-9-]+)'
-    return re.sub(sku_pattern, r'SKU: `\1`', response)
-
-def chat_interface(message, history):
-    response = chatbot.process_message(message, history)
-    return format_response_with_copyable_skus(response)
-
-# Modern chat widget
-theme = gr.themes.Soft(primary_hue="orange")
-
-demo = gr.ChatInterface(
-    fn=chat_interface,
-    theme=theme,
-    title="Auto Parts Assistant",
-    description="Find live stock, prices & policies for automotive parts",
-    examples=[
-        "Honda battery",
-        "Toyota tires", 
-        "Opening hours?",
-        "Return policy"
-    ],
-    textbox=gr.Textbox(
-        placeholder="Type your message here... (e.g., 'Honda battery', 'What are your hours?')",
-        container=False
-    ),
-    chatbot=gr.Chatbot(
-        show_copy_button=True,
-        bubble_full_width=False
-    ),
-    additional_inputs=[],
-    css=".contain { max-width: 800px !important; }"
-)
-
-# Add footer via CSS injection
-with demo:
-    gr.HTML("""
-        <script>
-        setTimeout(() => {
-            const footer = document.createElement('div');
-            footer.className = 'footer';
-            footer.innerHTML = '☎️ 1800-AUTO-PARTS | ✉️ support@autoparts.com.au';
-            footer.style.cssText = 'position: fixed; bottom: 0; left: 0; right: 0; background: var(--background-fill-primary); padding: 8px; text-align: center; border-top: 1px solid var(--border-color-primary); font-size: 14px; z-index: 1000;';
-            document.body.appendChild(footer);
-        }, 1000);
-        </script>
-    """, visible=False)
 
 if __name__ == "__main__":
-    demo.launch(share=True, show_error=True)
+    from ui import launch_app
+    launch_app()
