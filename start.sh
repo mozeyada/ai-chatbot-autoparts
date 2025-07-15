@@ -23,4 +23,4 @@ fi
 # Start the chatbot
 echo "Starting chatbot..."
 echo "Access at: http://localhost:7860"
-venv/bin/python chatbot.py
+venv/bin/python3 chatbot.py

@@ -45,7 +45,8 @@ def create_interface():
             "Honda battery",
             "Toyota tires", 
             "Opening hours?",
-            "Return policy"
+            "Return policy",
+            "Can you recommend parts for my car?"
         ],
         textbox=gr.Textbox(
             placeholder="Type your message here... (e.g., 'Honda battery', 'What are your hours?')",
@@ -81,6 +82,8 @@ def launch_app():
     demo = create_interface()
     demo.launch(share=True, show_error=True)
 
+
+#!/usr/bin/env python3
 
 if __name__ == "__main__":
     launch_app()

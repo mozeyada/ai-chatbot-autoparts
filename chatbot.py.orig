@@ -17,7 +17,7 @@ from intent import (
     search_parts, check_faq, call_groq_api, format_parts_with_llm,
     format_parts_response, detect_multi_query, split_multi_query,
     normalize_category, is_valid_name, extract_contact_details,
-    is_valid_email, is_valid_phone, is_absurd_or_nonsense, is_negation
+    is_valid_email, is_valid_phone, is_absurd_or_nonsense
 )
 
 # Load environment variables
@@ -74,10 +74,6 @@ class AutoPartsChatbot:
         self.last_response = None
         self.friendly_mode = False
         self.last_sku_shown = None
-        
-        # Intent history tracking
-        self.previous_intents = []  # Store last 3 intents
-        self.last_intent = None
     
     def reset_session(self):
         """Reset conversation session"""
@@ -110,10 +106,6 @@ class AutoPartsChatbot:
         self.last_response = None
         self.friendly_mode = False
         self.last_sku_shown = None
-        
-        # Reset intent history
-        self.previous_intents = []
-        self.last_intent = None
     
     def get_available_makes(self) -> List[str]:
         """Get available vehicle makes from products data"""
@@ -222,22 +214,6 @@ class AutoPartsChatbot:
         intent = detect_intent(resolved_message, self.groq_api_key)
         print(f"DEBUG: Intent detected: '{intent}' for message: '{message[:30]}...'" if len(message) > 30 else f"DEBUG: Intent detected: '{intent}' for message: '{message}'")
         
-        # Store intent history
-        self.last_intent = intent
-        self.previous_intents.insert(0, intent)
-        if len(self.previous_intents) > 3:
-            self.previous_intents = self.previous_intents[:3]
-        
-        # Handle negation responses - don't reset context
-        if is_negation(message):
-            print("DEBUG: Negation detected, preserving context")
-            # If we were in lead capture, cancel it but preserve context
-            if self.awaiting_lead_capture or self.lead_capture_step:
-                self.awaiting_lead_capture = False
-                self.lead_capture_step = None
-                return "No problem. Is there anything else I can help you with?"
-            # Otherwise just acknowledge and continue
-            return "Understood. Is there something else I can help you with?"
         
         # Handle abuse with proper de-escalation (no product fallback)
         if intent == 'abuse':
@@ -310,9 +286,9 @@ class AutoPartsChatbot:
             
             # Handle thanks and end session
             if any(word in message_lower for word in ['thanks', 'thank you', 'cheers']):
-                # Don't reset session immediately to maintain context
+                self.reset_session()
                 response = "You're welcome!" if not self.friendly_mode else "No worries, buddy!"
-                return f"{response} Feel free to ask if you need anything else."
+                return f"{response} Feel free to come back anytime you need auto parts help."
             
             # Handle common chitchat patterns with friendly mode
             if any(pattern in message_lower for pattern in ['how is you day', 'how is your day', "how's your day"]):
@@ -381,14 +357,7 @@ class AutoPartsChatbot:
             # This will fall through to the product query handling below
             pass
         
-        # Special handling for "call me" phrases that might be missed by intent detection
-        if "call me" in message.lower() and intent != "lead":
-            print("DEBUG: Special case - 'call me' detected, overriding intent to lead")
-            intent = "lead"
-            self.awaiting_lead_capture = True
-        
         # Handle lead capture with 3-step flow
-        # Check if this is a lead intent or if we're already in lead capture flow
         if intent == 'lead' or self.awaiting_lead_capture or self.lead_capture_step or self.pending_install_lead:
             # Step 1: User agrees to lead capture
             if (self.awaiting_lead_capture or self.pending_install_lead) and not self.lead_capture_step:

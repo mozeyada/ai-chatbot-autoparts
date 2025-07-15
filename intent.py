@@ -62,7 +62,6 @@ def is_valid_name(name: str) -> bool:
         return False
     
     # Basic name pattern (letters, spaces, common name characters)
-    import re
     if re.match(r'^[a-zA-Z\s\-\']{2,30}$', name.strip()):
         return True
     
@@ -71,8 +70,6 @@ def is_valid_name(name: str) -> bool:
 
 def extract_contact_details(message: str) -> dict:
     """Extract phone and email from a message"""
-    import re
-    
     phone_pattern = r'(\+?\d{1,3}[-.\s]?\(?\d{3,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}|\d{10})'
     email_pattern = r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'
     
@@ -119,6 +116,14 @@ def normalize_make(make_input: str, vehicle_synonyms: Dict[str, str]) -> Optiona
     if make_lower in vehicle_synonyms:
         return vehicle_synonyms[make_lower]
     
+    # Check common makes not in synonyms
+    common_makes = {
+        'hyundai': 'Hyundai', 'kia': 'Kia', 'mazda': 'Mazda', 'mitsubishi': 'Mitsubishi',
+        'lexus': 'Lexus', 'acura': 'Acura', 'infiniti': 'Infiniti', 'volvo': 'Volvo'
+    }
+    if make_lower in common_makes:
+        return common_makes[make_lower]
+    
     # Use fuzzy matching against synonym keys
     synonym_keys = list(vehicle_synonyms.keys())
     if synonym_keys:
@@ -134,40 +139,97 @@ def extract_vehicle_and_part(message: str, vehicle_synonyms: Dict[str, str], syn
     message_lower = message.lower().strip()
     words = message_lower.split()
     
-    # Extract vehicle make with fuzzy matching
+    # Common vehicle makes (expand beyond synonyms)
+    all_makes = {
+        'honda': 'Honda', 'toyota': 'Toyota', 'ford': 'Ford', 'bmw': 'BMW', 'nissan': 'Nissan',
+        'chevrolet': 'Chevrolet', 'chevy': 'Chevrolet', 'subaru': 'Subaru', 'audi': 'Audi', 
+        'volkswagen': 'Volkswagen', 'vw': 'Volkswagen', 'jeep': 'Jeep', 'mercedes': 'Mercedes-Benz',
+        'hyundai': 'Hyundai', 'kia': 'Kia', 'mazda': 'Mazda', 'mitsubishi': 'Mitsubishi',
+        'lexus': 'Lexus', 'acura': 'Acura', 'infiniti': 'Infiniti', 'volvo': 'Volvo'
+    }
+    
+    # Check if the entire message is just a vehicle make
+    if message_lower in all_makes:
+        return all_makes[message_lower], None
+    
+    # Extract vehicle make
     vehicle_make = None
     for word in words:
-        if len(word) >= 4:
-            normalized_make = normalize_make(word, vehicle_synonyms)
-            if normalized_make:
-                vehicle_make = normalized_make
-                break
+        if word in all_makes:
+            vehicle_make = all_makes[word]
+            break
+        elif word in vehicle_synonyms:
+            vehicle_make = vehicle_synonyms[word]
+            break
     
-    # If no match with length >= 4, try exact matches for shorter words
-    if not vehicle_make:
-        for word in words:
-            if word in vehicle_synonyms:
-                vehicle_make = vehicle_synonyms[word]
-                break
-    
-    # Check for unsupported but recognizable vehicle makes
-    if not vehicle_make:
-        unsupported_makes = ['ferrari', 'lamborghini', 'maserati', 'bugatti', 'mclaren', 'porsche', 'tesla']
-        for word in words:
-            if word.lower() in unsupported_makes:
-                vehicle_make = word.title()
-                break
+    # Common part patterns (expand beyond synonyms)
+    part_patterns = {
+        'battery': 'Battery', 'tire': 'Tires', 'tires': 'Tires', 'brake': 'Brakes', 'brakes': 'Brakes',
+        'oil': 'Engine Oil', 'filter': 'Filters', 'filters': 'Filters', 'spark': 'Spark Plugs',
+        'suspension': 'Suspension', 'light': 'Lighting', 'lights': 'Lighting', 'headlight': 'Lighting',
+        'mirror': 'Accessories', 'mirrors': 'Accessories', 'bumper': 'Accessories', 'fender': 'Accessories',
+        'windshield': 'Accessories', 'door': 'Accessories', 'window': 'Accessories',
+        'rear': 'Accessories', 'front': 'Accessories', 'side': 'Accessories',
+        'wiper': 'Accessories', 'wipers': 'Accessories', 'mat': 'Accessories', 'mats': 'Accessories',
+        'seat': 'Accessories', 'seats': 'Accessories', 'cover': 'Accessories', 'covers': 'Accessories',
+        'bulb': 'Lighting', 'bulbs': 'Lighting', 'lamp': 'Lighting', 'lamps': 'Lighting',
+        'sensor': 'Electrical', 'sensors': 'Electrical', 'switch': 'Electrical', 'switches': 'Electrical'
+    }
     
     # Extract part category
     part_category = None
     
-    # First try exact synonym matches
-    for word in words:
-        if word in synonyms:
-            part_category = synonyms[word]
+    # Check for specific compound parts
+    compound_parts = {
+        'rear mirror': 'Accessories',
+        'side mirror': 'Accessories',
+        'front mirror': 'Accessories',
+        'rear light': 'Lighting',
+        'side light': 'Lighting',
+        'front light': 'Lighting',
+        'rear bumper': 'Accessories',
+        'front bumper': 'Accessories',
+        'side bumper': 'Accessories',
+        'oil filter': 'Filters',
+        'air filter': 'Filters',
+        'fuel filter': 'Filters',
+        'cabin filter': 'Filters',
+        'spark plug': 'Spark Plugs'
+    }
+    
+    # Check for compound parts in the full message
+    for compound, category in compound_parts.items():
+        if compound in message_lower:
+            part_category = category
             break
     
-    # Then try fuzzy matching for typos
+    # If no match yet, check for adjacent words
+    if not part_category:
+        message_parts = message_lower.replace('-', ' ').split()
+        for i, word in enumerate(message_parts):
+            # Check compound parts like "rear mirror", "side mirror", etc.
+            if word in ['rear', 'side', 'front'] and i + 1 < len(message_parts):
+                next_word = message_parts[i + 1]
+                if next_word in ['mirror', 'light', 'bumper']:
+                    if next_word == 'mirror':
+                        part_category = 'Accessories'
+                    elif next_word == 'light':
+                        part_category = 'Lighting'
+                    else:
+                        part_category = 'Accessories'
+                    break
+    
+    # Single word part matching
+    if not part_category:
+        for word in words:
+            if word in part_patterns:
+                part_category = part_patterns[word]
+                break
+            elif word in synonyms:
+                part_category = synonyms[word]
+                break
+    
+    # Fuzzy matching as fallback
     if not part_category:
         for word in words:
             if len(word) > 3:
@@ -177,11 +239,6 @@ def extract_vehicle_and_part(message: str, vehicle_synonyms: Dict[str, str], syn
                     if match:
                         part_category = synonyms[match[0]]
                         break
-    
-    # Guard against keyword collisions
-    if part_category and 'starter' in part_category.lower():
-        if not any(word == 'starter' for word in words):
-            part_category = None
     
     return vehicle_make, part_category
 
@@ -222,73 +279,152 @@ def is_absurd_or_nonsense(message: str) -> bool:
     return False
 
 
-def detect_intent(message: str) -> str:
-    """Detect user intent with proper priority and abuse detection"""
+def is_negation(message: str) -> bool:
+    """Detect negative responses"""
     message_lower = message.lower().strip()
     
-    # Check for gibberish/unknown
-    words = [w for w in message_lower.split() if len(w) > 1]
-    if len(words) == 0:
-        return 'unknown'
+    # Simple exact negations
+    simple_negations = ['no', 'nope', 'no thanks', 'not now', 'no thank you', 'nah']
+    if message_lower in simple_negations:
+        return True
     
-    # Toxic/Abuse detection (HIGHEST priority)
-    if is_toxic(message):
+    # Negation at start of message
+    if message_lower.startswith('no ') or message_lower.startswith('not '):
+        return True
+    
+    # Common negative phrases
+    negative_phrases = ['don\'t want', 'do not want', 'not interested', 'no need', 'not needed']
+    if any(phrase in message_lower for phrase in negative_phrases):
+        return True
+    
+    return False
+
+
+def detect_intent(message: str, groq_api_key: str = None) -> str:
+    """Detect user intent using a hybrid approach (rules + LLM)"""
+    message_lower = message.lower().strip()
+    
+    # Fast path for simple cases
+    # Toxic/abuse detection
+    if is_toxic(message_lower):
         return 'abuse'
     
-    # FAQ patterns (HIGH priority)
-    faq_keywords = ['hours', 'open', 'close', 'return', 'refund', 'ship', 'payment', 'warranty', 'call', 'phone', 'contact', 'pay']
-    if any(keyword in message_lower for keyword in faq_keywords):
+    # Nonsense/absurd detection
+    if is_absurd_or_nonsense(message_lower):
+        return 'nonsense'
+    
+    # Simple chitchat patterns for quick responses
+    simple_chitchat = ['hi', 'hello', 'hey', 'thanks', 'thank you', 'ok', 'okay']
+    if message_lower in simple_chitchat:
+        return 'chitchat'
+    
+    # Try LLM-based intent detection for complex queries
+    if groq_api_key and len(message.split()) > 2:
+        try:
+            system_prompt = """You are an auto parts store assistant. Classify the user's message into EXACTLY ONE of these intents:
+            - product: User is asking about auto parts or mentioning a vehicle make/model
+            - faq: User is asking about store policies, hours, location, etc.
+            - installation: User is asking about installing parts or service
+            - lead: User wants to be contacted or provide contact info
+            - chitchat: General conversation, greetings, thanks
+            - car_sales: User wants to buy a car (not parts)
+            - promotions: User is asking about deals or discounts
+            - unknown: Can't determine intent
+            
+            Reply with ONLY the intent name, nothing else."""
+            
+            llm_response = call_groq_api(groq_api_key, message, system_prompt)
+            intent = llm_response.strip().lower()
+            
+            # Validate the intent
+            valid_intents = ['product', 'faq', 'installation', 'lead', 'chitchat', 'car_sales', 'promotions', 'unknown']
+            if intent in valid_intents:
+                print(f"DEBUG: LLM detected intent: {intent}")
+                return intent
+        except Exception as e:
+            print(f"LLM intent detection failed: {e}")
+    
+    # Fallback to rule-based detection
+    # FAQ patterns
+    faq_patterns = [
+        'hours', 'open', 'close', 'location', 'address', 'phone', 'contact',
+        'return', 'warranty', 'policy', 'shipping', 'delivery', 'payment'
+    ]
+    if any(pattern in message_lower for pattern in faq_patterns):
         return 'faq'
     
-    # Installation/Service intent
-    install_keywords = ['install', 'installation', 'fit', 'fitting', 'replace', 'service', 'how long', 'appointment', 'booking', 'how do i put', 'do you do the install', 'how to install', 'install myself', 'when can i', 'arrange']
-    if any(keyword in message_lower for keyword in install_keywords):
+    # Installation patterns
+    install_patterns = [
+        'install', 'installation', 'how to', 'diy', 'service', 'appointment',
+        'book', 'schedule', 'mechanic', 'professional'
+    ]
+    if any(pattern in message_lower for pattern in install_patterns):
         return 'installation'
     
-    # Car sales intent
-    sales_keywords = ['buy a new car', 'purchase vehicle', 'new car', 'buying a car', 'car dealership']
-    if any(keyword in message_lower for keyword in sales_keywords):
-        return 'car_sales'
-    
-    # Callback request detection (HIGH priority)
-    callback_patterns = ['call me', 'can you call', 'request.*call', 'phone me', 'ring me', 'callback']
-    if any(re.search(pattern, message_lower) for pattern in callback_patterns):
-        return 'callback_request'
-    
-    # Promotions/Specials detection (HIGH priority)
-    promo_keywords = ['special', 'discount', 'deal', 'offer', 'promotion', 'sale', 'cheap', 'best price']
-    if any(keyword in message_lower for keyword in promo_keywords):
-        return 'promotions'
-    
-    # Enhanced Chitchat patterns (EXPANDED)
-    chitchat_patterns = [
-        'who are you', 'what are you', 'how are you', 'how is your day', 'how is you day',
-        "how's your day", 'how is the weather', "how's the weather", "how's your week",
-        'how is your week', 'how are things', "how's it going", "what's up", 'whats up',
-        "what's the weather", 'weather', 'thanks', 'thank you', 'sorry',
-        'hello', 'hi', 'hey', 'good morning', 'good afternoon', 
-        'how is', 'nice to meet', 'goodbye', 'bye', 'good', 'great', 'awesome', 
-        'nice', 'cool', 'perfect', 'excellent', 'not bad', 'sounds good', "that's fine", 'thats fine', 'no worries',
-        'why are you', 'other questions', 'are you', 'chat gpt', 'chatgpt',
-        # NEW: Friendship/tone requests
-        'speak.*friend', 'talk.*friend', 'be.*friend', 'friend', 'cold', 'warm', 'friendly',
-        'does that mean', 'teach me', 'will you teach', 'respect',
-        # NEW: Emotional expressions
-        'mean', 'other parts'
+    # Lead capture patterns
+    lead_patterns = [
+        'call me', 'callback', 'contact me', 'reach out', 'get back',
+        'phone number', 'email', '@', 'notify', 'let me know', 'call',
+        'contact', 'reach', 'get in touch', 'get a hold', 'call back'
     ]
     
-    # Check for exact word matches for short chitchat
-    short_chitchat = ['ok', 'kk', 'hi', 'hey', 'thanks', 'bye', 'good', 'great', 'nice', 'cool', 'sorry', '?', 'hmm']
-    if message_lower in short_chitchat:
+    # Check for lead patterns with higher priority
+    if any(pattern in message_lower for pattern in lead_patterns):
+        # Special case for "call" to avoid false positives
+        if 'call' in message_lower and len(message_lower.split()) <= 3:
+            return 'lead'
+        elif 'call' not in message_lower or ('call' in message_lower and any(word in message_lower for word in ['me', 'us', 'back'])):
+            return 'lead'
+    
+    # Chitchat patterns
+    chitchat_patterns = [
+        'hello', 'hi', 'hey', 'good morning', 'good afternoon', 'how are you',
+        'thanks', 'thank you', 'weather', 'who are you', 'what are you',
+        'friend', 'cold', 'warm', 'does that mean', 'doing good', 'am good', 'fine'
+    ]
+    if any(pattern in message_lower for pattern in chitchat_patterns):
         return 'chitchat'
     
-    # Check for longer chitchat patterns
-    if any(re.search(pattern, message_lower) for pattern in chitchat_patterns):
-        return 'chitchat'
+    # Car sales (out of scope)
+    car_sales_patterns = [
+        'buy car', 'new car', 'used car', 'car dealer', 'car lot',
+        'financing', 'lease', 'trade in'
+    ]
+    if any(pattern in message_lower for pattern in car_sales_patterns):
+        return 'car_sales'
     
-    # Product queries (check for vehicle or part mentions)
-    # This should be checked after specific intents but before unknown
-    return 'product'
+    # Promotions patterns
+    promo_patterns = [
+        'special', 'deal', 'discount', 'sale', 'promotion', 'offer',
+        'coupon', 'price', 'cheap', 'best price'
+    ]
+    if any(pattern in message_lower for pattern in promo_patterns):
+        return 'promotions'
+    
+    # Product patterns (vehicle makes and parts)
+    vehicle_makes = [
+        'honda', 'toyota', 'ford', 'bmw', 'nissan', 'chevrolet', 'chevy',
+        'subaru', 'audi', 'volkswagen', 'vw', 'jeep', 'mercedes', 'hyundai',
+        'kia', 'mazda', 'mitsubishi', 'lexus', 'acura', 'infiniti', 'volvo'
+    ]
+    part_names = [
+        'battery', 'tire', 'tires', 'brake', 'brakes', 'oil', 'filter',
+        'spark', 'suspension', 'light', 'lights', 'mirror', 'bumper', 'rear',
+        'front', 'side', 'wiper', 'sensor', 'bulb', 'lamp'
+    ]
+    
+    has_vehicle = any(make in message_lower for make in vehicle_makes)
+    has_part = any(part in message_lower for part in part_names)
+    
+    if has_vehicle or has_part:
+        return 'product'
+    
+    # Check for compound parts like "rear mirror"
+    compound_parts = ['rear mirror', 'side mirror', 'front mirror', 'rear light', 'side light']
+    if any(part in message_lower for part in compound_parts):
+        return 'product'
+    
+    return 'unknown'
 
 
 def detect_multi_query(message: str) -> bool:
@@ -387,6 +523,7 @@ def call_groq_api(groq_api_key: str, message: str, context: str = "") -> str:
     """Call Groq API for LLM responses"""
     # Return mock response during testing
     if not groq_api_key:
+        print("Warning: No GROQ_API_KEY provided. Using mock response.")
         return "I'm here to help with auto parts. What can I find for you?"
         
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -395,13 +532,16 @@ def call_groq_api(groq_api_key: str, message: str, context: str = "") -> str:
         "Authorization": f"Bearer {groq_api_key}"
     }
     
-    system_prompt = """You are a helpful auto parts store assistant. Be concise and professional (max 2 sentences). 
-    Always guide customers to provide vehicle make and part type for searches.
-    Available makes: Honda, Toyota, Ford, BMW, Nissan, Chevrolet, Subaru, Audi, Volkswagen, Jeep, Mercedes-Benz
-    Common parts: battery, tires, brakes, oil, filters, spark plugs, suspension, lights"""
-    
+    # If context is provided, use it as the system prompt
     if context:
-        system_prompt += f"\n\n{context}"
+        system_prompt = context
+    else:
+        system_prompt = """You are a helpful auto parts store assistant. Be concise and professional (max 2 sentences). 
+        Always guide customers to provide vehicle make and part type for searches.
+        Available makes: Honda, Toyota, Ford, BMW, Nissan, Chevrolet, Subaru, Audi, Volkswagen, Jeep, Mercedes-Benz, Hyundai, Kia
+        Common parts: battery, tires, brakes, oil, filters, spark plugs, suspension, lights, mirrors, bumpers
+        Accessories include: mirrors, bumpers, trim pieces, floor mats, etc.
+        Lighting includes: headlights, tail lights, turn signals, etc."""
     
     data = {
         "model": "llama3-8b-8192",
@@ -409,17 +549,22 @@ def call_groq_api(groq_api_key: str, message: str, context: str = "") -> str:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": message}
         ],
-        "max_tokens": 100,
-        "temperature": 0.5
+        "max_tokens": 150,
+        "temperature": 0.3
     }
     
     try:
-        response = requests.post(url, headers=headers, json=data, timeout=10)
+        print(f"Calling Groq API with message: {message[:30]}...")
+        response = requests.post(url, headers=headers, json=data, timeout=15)
         if response.status_code == 200:
-            return response.json()['choices'][0]['message']['content']
+            content = response.json()['choices'][0]['message']['content']
+            print(f"Groq API response received: {content[:30]}...")
+            return content
         else:
+            print(f"Groq API error: {response.status_code} - {response.text}")
             return "I'm having trouble connecting right now. Please try again or contact us directly at our store."
     except Exception as e:
+        print(f"Groq API exception: {str(e)}")
         return "I'm experiencing technical difficulties. Please contact our store directly for assistance."
 
 

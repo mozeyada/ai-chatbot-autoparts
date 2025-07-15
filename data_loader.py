@@ -146,3 +146,20 @@ def save_lead_with_service(leads_file: str, name: str, contact: str, vehicle_mak
 def save_lead(leads_file: str, name: str, contact: str, vehicle_make: str, part_category: str, original_message: str):
     """Backward compatibility wrapper for saving leads"""
     save_lead_with_service(leads_file, name, contact, vehicle_make, part_category, original_message, False)
+
+
+def load_training_data(file_path: str) -> List[Dict]:
+    """Load and preprocess training data for the NLP model"""
+    try:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+            return [
+                {
+                    "text": item["text"],
+                    "label": item["label"]
+                }
+                for item in data
+            ]
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Warning: Could not load training data: {e}")
+        return []

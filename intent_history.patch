@@ -1,0 +1,37 @@
+--- chatbot.py.orig
++++ chatbot.py
+@@ -73,6 +73,10 @@
+         self.last_response = None
+         self.friendly_mode = False
+         self.last_sku_shown = None
++        
++        # Intent history tracking
++        self.previous_intents = []  # Store last 3 intents
++        self.last_intent = None
+     
+     def reset_session(self):
+         """Reset conversation session"""
+@@ -98,6 +102,10 @@
+         self.last_response = None
+         self.friendly_mode = False
+         self.last_sku_shown = None
++        
++        # Reset intent history
++        self.previous_intents = []
++        self.last_intent = None
+     
+     def get_available_makes(self) -> List[str]:
+         """Get available vehicle makes from products data"""
+@@ -240,6 +248,12 @@
+         # Detect intent on resolved message using LLM
+         intent = detect_intent(resolved_message, self.groq_api_key)
+         print(f"DEBUG: Intent detected: '{intent}' for message: '{message[:30]}...'\" if len(message) > 30 else f\"DEBUG: Intent detected: '{intent}' for message: '{message}'\"")
++        
++        # Store intent history
++        self.last_intent = intent
++        self.previous_intents.insert(0, intent)
++        if len(self.previous_intents) > 3:
++            self.previous_intents = self.previous_intents[:3]
+ 
+         # Handle abuse with proper de-escalation (no product fallback)
+         if intent == 'abuse':
