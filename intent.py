@@ -264,6 +264,15 @@ def is_absurd_or_nonsense(message: str) -> bool:
     if message_lower in common_greetings:
         return False
     
+    # Common auto parts should not be flagged as nonsense
+    common_parts = ['battery', 'batteries', 'tire', 'tires', 'brake', 'brakes', 'oil', 'filter', 'filters', 
+                    'spark', 'plugs', 'light', 'lights', 'mirror', 'mirrors', 'bumper', 'bumpers']
+    
+    # Check for common parts with fuzzy matching for typos
+    for part in common_parts:
+        if part in message_lower or fuzz.ratio(message_lower, part) > 80:
+            return False
+    
     absurd_patterns = [
         r'eat.*battery', r'battery.*eat', r'hungry.*battery',
         r'are you.*gpt', r'are you.*chat', r'chat.*gpt',

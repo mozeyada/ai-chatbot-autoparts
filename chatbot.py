@@ -392,6 +392,29 @@ class AutoPartsChatbot:
             self.oops_count += 1
             self.consecutive_fallbacks += 1
             
+            # Check if message might be a part name without vehicle make
+            common_parts = ['battery', 'batteries', 'tire', 'tires', 'brake', 'brakes', 'oil', 'filter', 'filters', 
+                           'spark', 'plugs', 'light', 'lights', 'mirror', 'mirrors', 'bumper', 'bumpers']
+            
+            message_lower = message.lower().strip()
+            for part in common_parts:
+                if part in message_lower or fuzz.ratio(message_lower, part) > 80:
+                    # This is likely a part name without vehicle make
+                    normalized_part = part
+                    if part == 'batteries': normalized_part = 'Battery'
+                    elif part in ['tires', 'tire']: normalized_part = 'Tires'
+                    elif part in ['brakes', 'brake']: normalized_part = 'Brakes'
+                    elif part in ['filters', 'filter']: normalized_part = 'Filters'
+                    elif part in ['lights', 'light']: normalized_part = 'Lighting'
+                    elif part in ['mirrors', 'mirror']: normalized_part = 'Accessories'
+                    elif part in ['bumpers', 'bumper']: normalized_part = 'Accessories'
+                    
+                    self.session_part = normalized_part
+                    self.slot_memory['part_category'] = normalized_part
+                    
+                    makes = self.get_available_makes()
+                    return f"I can help you find {part} for various vehicles! Which make do you need them for?\n\nAvailable makes: {', '.join(makes)}"
+            
             # Double fallback escalation - only if truly unknown
             if self.consecutive_fallbacks >= 3:
                 self.consecutive_fallbacks = 0
