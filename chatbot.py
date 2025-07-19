@@ -431,10 +431,12 @@ class AutoPartsChatbot:
             car_terms = ['car', 'vehicle', 'auto', 'automobile', 'ride']
             if any(term in message.lower() for term in car_terms):
                 from handle_vague_vehicle_query import handle_vague_vehicle_query
+                print("Using handle_vague_vehicle_query for car-related terms")
                 return handle_vague_vehicle_query(message, self.groq_api_key)
             
             # Always use LLM for unknown intents to provide a more natural response
             try:
+                print("Using LLM for unknown intent")
                 system_prompt = """You are a helpful auto parts store assistant. 
                 The user has sent a message that doesn't clearly specify a vehicle make or part.
                 
@@ -503,10 +505,23 @@ class AutoPartsChatbot:
                 else:
                     return "Things are going well, thanks for asking! I'm here to help you find the right auto parts. What can I help you with?"
             elif any(greeting in message_lower for greeting in ['hi', 'hello', 'hey', 'good morning', 'good afternoon']):
-                if self.friendly_mode:
-                    return "Hey there! What's your car needing today? Just tell me the make and part (like 'Honda battery')."
-                else:
-                    return "Hello! Welcome to our auto parts store. I can help you find parts for your vehicle. Just tell me your car make and what part you need (e.g., 'Honda battery' or 'Toyota tires')."
+                # Use LLM for greetings to make responses more natural
+                try:
+                    print("Using LLM for greeting")
+                    system_prompt = """You are a helpful auto parts store assistant. 
+                    The user has greeted you. Respond with a friendly greeting and ask how you can help them find auto parts.
+                    Mention that they should tell you their vehicle make and what part they need.
+                    
+                    Keep your response friendly, conversational, and under 2 sentences.
+                    """
+                    llm_response = call_groq_api(self.groq_api_key, message, system_prompt)
+                    return llm_response
+                except Exception as e:
+                    print(f"LLM greeting failed: {e}")
+                    if self.friendly_mode:
+                        return "Hey there! What's your car needing today? Just tell me the make and part (like 'Honda battery')."
+                    else:
+                        return "Hello! Welcome to our auto parts store. I can help you find parts for your vehicle. Just tell me your car make and what part you need (e.g., 'Honda battery' or 'Toyota tires')."
             elif message_lower in ['ok', 'kk', '?', 'hmm']:
                 return "Sure! Let me know if you need anything."
             elif any(phrase in message_lower for phrase in ['good', 'great', 'awesome', 'nice', 'cool', 'perfect', 'excellent', "that's fine", 'thats fine', 'no worries', 'sounds good', 'not bad']):
@@ -646,8 +661,9 @@ class AutoPartsChatbot:
         current_vehicle, current_part = extract_vehicle_and_part(resolved_message, self.vehicle_synonyms, self.synonyms)
         
         # If message contains "car" or "vehicle" but no specific make or part
-        if ('car' in resolved_message.lower() or 'vehicle' in resolved_message.lower()) and not current_vehicle and not current_part:
+        if ('car' in resolved_message.lower() or 'vehicle' in resolved_message.lower() or 'my' in resolved_message.lower()) and not current_vehicle and not current_part:
             from handle_vague_vehicle_query import handle_vague_vehicle_query
+            print("Using handle_vague_vehicle_query for vague vehicle query in product intent")
             return handle_vague_vehicle_query(resolved_message, self.groq_api_key)
         
         # Use LLM for complex part extraction if we have a vehicle but no part detected

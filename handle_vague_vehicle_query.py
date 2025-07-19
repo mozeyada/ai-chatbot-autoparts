@@ -18,6 +18,7 @@ def handle_vague_vehicle_query(message: str, groq_api_key: str) -> str:
         Be helpful and natural in your response.
         """
         
+        print(f"Calling LLM for vague vehicle query: {message}")
         return call_groq_api(groq_api_key, message, system_prompt)
     except Exception as e:
         print(f"LLM vehicle query handling failed: {e}")

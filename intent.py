@@ -260,9 +260,10 @@ def is_absurd_or_nonsense(message: str) -> bool:
     message_lower = message.lower().strip()
     
     # Common greetings should not be flagged as nonsense
-    common_greetings = ['hi', 'hey', 'hello', 'yo', 'hola']
-    if message_lower in common_greetings:
-        return False
+    common_greetings = ['hi', 'hey', 'hello', 'yo', 'hola', 'hi there', 'hello there', 'greetings']
+    for greeting in common_greetings:
+        if message_lower == greeting or message_lower.startswith(greeting + ' '):
+            return False
     
     # Common auto parts should not be flagged as nonsense
     common_parts = ['battery', 'batteries', 'tire', 'tires', 'brake', 'brakes', 'oil', 'filter', 'filters', 
@@ -271,6 +272,12 @@ def is_absurd_or_nonsense(message: str) -> bool:
     # Check for common parts with fuzzy matching for typos
     for part in common_parts:
         if part in message_lower or fuzz.ratio(message_lower, part) > 80:
+            return False
+    
+    # Car-related terms should not be flagged as nonsense
+    car_terms = ['car', 'vehicle', 'auto', 'automobile', 'ride', 'truck', 'suv', 'van']
+    for term in car_terms:
+        if term in message_lower:
             return False
     
     absurd_patterns = [
@@ -329,8 +336,8 @@ def detect_intent(message: str, groq_api_key: str = None) -> str:
         return 'nonsense'
     
     # Simple chitchat patterns for quick responses
-    simple_chitchat = ['hi', 'hello', 'hey', 'thanks', 'thank you', 'ok', 'okay']
-    if message_lower in simple_chitchat:
+    simple_chitchat = ['hi', 'hello', 'hey', 'thanks', 'thank you', 'ok', 'okay', 'hi there', 'hello there', 'greetings']
+    if message_lower in simple_chitchat or message_lower.startswith(('hi ', 'hey ', 'hello ')):
         return 'chitchat'
     
     # Try LLM-based intent detection for complex queries
