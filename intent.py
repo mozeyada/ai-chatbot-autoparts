@@ -144,12 +144,14 @@ def extract_vehicle_and_part(message: str, vehicle_synonyms: Dict[str, str], syn
         'honda': 'Honda', 'toyota': 'Toyota', 'ford': 'Ford', 'bmw': 'BMW', 'nissan': 'Nissan',
         'chevrolet': 'Chevrolet', 'chevy': 'Chevrolet', 'subaru': 'Subaru', 'audi': 'Audi', 
         'volkswagen': 'Volkswagen', 'vw': 'Volkswagen', 'jeep': 'Jeep', 'mercedes': 'Mercedes-Benz',
+        'mercedes': 'Mercedes-Benz', 'benz': 'Mercedes-Benz',
         'hyundai': 'Hyundai', 'kia': 'Kia', 'mazda': 'Mazda', 'mitsubishi': 'Mitsubishi',
         'lexus': 'Lexus', 'acura': 'Acura', 'infiniti': 'Infiniti', 'volvo': 'Volvo'
     }
     
     # Check if the entire message is just a vehicle make
     if message_lower in all_makes:
+        print(f"DEBUG: Detected single vehicle make: {all_makes[message_lower]}")
         return all_makes[message_lower], None
     
     # Extract vehicle make
@@ -264,6 +266,13 @@ def is_absurd_or_nonsense(message: str) -> bool:
     for greeting in common_greetings:
         if message_lower == greeting or message_lower.startswith(greeting + ' '):
             return False
+    
+    # Common vehicle makes should not be flagged as nonsense
+    vehicle_makes = ['honda', 'toyota', 'ford', 'bmw', 'nissan', 'chevrolet', 'chevy', 'subaru', 'audi', 
+                     'volkswagen', 'vw', 'jeep', 'mercedes', 'benz', 'hyundai', 'kia', 'mazda', 
+                     'mitsubishi', 'lexus', 'acura', 'infiniti', 'volvo']
+    if message_lower in vehicle_makes:
+        return False
     
     # Common auto parts should not be flagged as nonsense
     common_parts = ['battery', 'batteries', 'tire', 'tires', 'brake', 'brakes', 'oil', 'filter', 'filters', 
