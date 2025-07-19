@@ -259,6 +259,11 @@ def is_absurd_or_nonsense(message: str) -> bool:
     """Detect absurd or nonsensical requests"""
     message_lower = message.lower().strip()
     
+    # Common greetings should not be flagged as nonsense
+    common_greetings = ['hi', 'hey', 'hello', 'yo', 'hola']
+    if message_lower in common_greetings:
+        return False
+    
     absurd_patterns = [
         r'eat.*battery', r'battery.*eat', r'hungry.*battery',
         r'are you.*gpt', r'are you.*chat', r'chat.*gpt',
@@ -270,7 +275,8 @@ def is_absurd_or_nonsense(message: str) -> bool:
         if re.search(pattern, message_lower):
             return True
     
-    if len(message_lower.strip()) < 3:
+    # Only flag very short messages that aren't common greetings
+    if len(message_lower) < 2 and message_lower not in ['a', 'i', 'q']:
         return True
     
     if re.match(r'^[a-z]{8,}$', message_lower) and not any(word in message_lower for word in ['battery', 'tire', 'brake', 'honda', 'toyota']):
@@ -427,6 +433,119 @@ def detect_intent(message: str, groq_api_key: str = None) -> str:
     return 'unknown'
 
 
+def enhanced_intent_detection(message: str, context: dict, groq_api_key: str) -> dict:
+    """Enhanced intent detection with chain-of-thought reasoning"""
+    # Fast path for simple cases
+    message_lower = message.lower().strip()
+    
+    # Handle simple cases without LLM
+    if is_toxic(message_lower):
+        return {
+            "primary_intent": "abuse",
+            "secondary_intent": None,
+            "entities": {},
+            "confidence": 0.9,
+            "reasoning": "Detected toxic language"
+        }
+    
+    if is_absurd_or_nonsense(message_lower):
+        return {
+            "primary_intent": "nonsense",
+            "secondary_intent": None,
+            "entities": {},
+            "confidence": 0.9,
+            "reasoning": "Detected nonsensical query"
+        }
+    
+    # Simple chitchat patterns for quick responses
+    simple_chitchat = ['hi', 'hello', 'hey', 'thanks', 'thank you', 'ok', 'okay']
+    if message_lower in simple_chitchat:
+        return {
+            "primary_intent": "chitchat",
+            "secondary_intent": None,
+            "entities": {},
+            "confidence": 0.9,
+            "reasoning": "Simple greeting or acknowledgment"
+        }
+    
+    # Use LLM for complex queries
+    system_prompt = """You are an auto parts store assistant analyzing customer queries.
+    
+    First, identify ALL entities in the query:
+    - Vehicle makes (Honda, Toyota, etc.)
+    - Part categories (battery, tires, etc.)
+    - Service requests (installation, warranty, etc.)
+    - Contact information (phone, email, etc.)
+    
+    Then, determine the PRIMARY intent from these categories:
+    - product: Customer wants to find specific auto parts
+    - faq: Customer is asking about store policies or information
+    - installation: Customer needs help with part installation
+    - lead: Customer wants to be contacted or provide contact info
+    - chitchat: General conversation, greetings, thanks
+    - car_sales: Customer wants to buy a car (not parts)
+    - promotions: Customer is asking about deals or discounts
+    - unknown: Can't determine intent
+    
+    Finally, identify any SECONDARY intents that may be present.
+    
+    Format your response as JSON:
+    {
+      "primary_intent": "intent_name",
+      "secondary_intent": "intent_name",
+      "entities": {
+        "vehicle_make": "detected_make",
+        "part_category": "detected_part",
+        "service_type": "detected_service"
+      },
+      "confidence": 0.0-1.0,
+      "reasoning": "brief explanation"
+    }
+    """
+    
+    try:
+        # Include context in the user message for better understanding
+        context_str = ""
+        if context.get('vehicle_make'):
+            context_str += f"Previously mentioned vehicle: {context['vehicle_make']}. "
+        if context.get('part_category'):
+            context_str += f"Previously mentioned part: {context['part_category']}. "
+        
+        enhanced_message = f"{context_str}User message: {message}"
+        
+        # Call LLM with enhanced prompt
+        llm_response = call_groq_api(groq_api_key, enhanced_message, system_prompt)
+        
+        # Parse JSON response
+        try:
+            result = json.loads(llm_response)
+            print(f"DEBUG: Enhanced intent detection: {result}")
+            return result
+        except json.JSONDecodeError:
+            print(f"Failed to parse LLM response as JSON: {llm_response}")
+            # Fallback to basic intent detection
+            basic_intent = detect_intent(message, groq_api_key)
+            return {
+                "primary_intent": basic_intent,
+                "secondary_intent": None,
+                "entities": {},
+                "confidence": 0.5,
+                "reasoning": "Fallback to basic detection"
+            }
+            
+    except Exception as e:
+        print(f"Enhanced intent detection failed: {e}")
+        # Fallback to basic intent detection
+        basic_intent = detect_intent(message, groq_api_key)
+        return {
+            "primary_intent": basic_intent,
+            "secondary_intent": None,
+            "entities": {},
+            "confidence": 0.5,
+            "reasoning": "Error in LLM processing"
+        }
+
+
 def detect_multi_query(message: str) -> bool:
     """Detect if message contains multiple vehicle/part queries"""
     separators = [' or ', ' OR ', ' and ', ' AND ', ' & ', ', ']
@@ -566,6 +685,79 @@ def call_groq_api(groq_api_key: str, message: str, context: str = "") -> str:
     except Exception as e:
         print(f"Groq API exception: {str(e)}")
         return "I'm experiencing technical difficulties. Please contact our store directly for assistance."
+
+
+def generate_contextual_response(groq_api_key: str, message: str, intent: str, context: dict, parts_data=None) -> str:
+    """Generate natural responses with full context awareness"""
+    # Build rich context for the LLM
+    context_str = ""
+    
+    # Add conversation context
+    if context.get('vehicle_make'):
+        context_str += f"Customer's vehicle: {context['vehicle_make']}. "
+    if context.get('part_category'):
+        context_str += f"Customer is interested in: {context['part_category']}. "
+    
+    # Add intent-specific context
+    if intent == 'product' and parts_data:
+        # Format parts data for the LLM
+        parts_summary = []
+        for part in parts_data[:3]:
+            parts_summary.append({
+                "name": part['PartName'],
+                "sku": part['SKU'],
+                "price": part['Price'],
+                "availability": part['Availability']
+            })
+        context_str += f"Available parts: {json.dumps(parts_summary)}. "
+    
+    # Add entity memory if available
+    if context.get('entity_memory'):
+        for key, value in context['entity_memory'].items():
+            context_str += f"{key}: {value}. "
+    
+    # Create system prompt based on intent
+    if intent == 'product':
+        system_prompt = f"""You are a helpful auto parts store assistant. 
+        
+        CONTEXT: {context_str}
+        
+        Create a friendly, conversational response about the available parts.
+        - Highlight the best option first
+        - Mention price and availability
+        - Keep your response concise (2-3 sentences)
+        - End with a question about installation if appropriate
+        
+        DO NOT include SKU numbers in your main response."""
+    
+    elif intent == 'installation':
+        system_prompt = f"""You are a helpful auto parts store assistant.
+        
+        CONTEXT: {context_str}
+        
+        Create a friendly response about installation services:
+        - Mention the estimated time for installation
+        - Offer both DIY guidance and professional service
+        - Keep your response concise (2-3 sentences)
+        - End with a question about booking an appointment
+        
+        DO NOT make up any specific times or prices."""
+    
+    else:
+        system_prompt = f"""You are a helpful auto parts store assistant.
+        
+        CONTEXT: {context_str}
+        
+        Create a friendly, conversational response that:
+        - Directly addresses the customer's question
+        - Uses the context information appropriately
+        - Keeps your response concise (2-3 sentences)
+        - Maintains a helpful, professional tone
+        
+        DO NOT make up any information not provided in the context."""
+    
+    # Call LLM with enhanced prompt
+    return call_groq_api(groq_api_key, message, system_prompt)
 
 
 def format_parts_with_llm(groq_api_key: str, parts: List[Dict], vehicle: str, part_type: str) -> str:

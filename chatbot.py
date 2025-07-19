@@ -78,6 +78,11 @@ class AutoPartsChatbot:
         # Intent history tracking
         self.previous_intents = []  # Store last 3 intents
         self.last_intent = None
+        
+        # Advanced context tracking
+        self.entity_memory = {}  # Store additional entities
+        self.conversation_state = 'initial'  # For state machine
+        self.state_history = []  # Track conversation flow
     
     def reset_session(self):
         """Reset conversation session"""
@@ -114,6 +119,131 @@ class AutoPartsChatbot:
         # Reset intent history
         self.previous_intents = []
         self.last_intent = None
+        
+        # Reset advanced context
+        self.entity_memory = {}
+        self.conversation_state = 'initial'
+        
+    def update_context_memory(self, intent_data: dict, message: str):
+        """Update context memory with enhanced entity tracking"""
+        # Extract entities from intent data
+        entities = intent_data.get('entities', {})
+        
+        # Update vehicle make if detected
+        if entities.get('vehicle_make'):
+            self.session_vehicle = entities['vehicle_make']
+            self.slot_memory['vehicle_make'] = entities['vehicle_make']
+            self.turns_since_valid_context = 0
+        
+        # Update part category if detected
+        if entities.get('part_category'):
+            self.session_part = entities['part_category']
+            self.slot_memory['part_category'] = entities['part_category']
+            self.turns_since_valid_context = 0
+        
+        # Store any additional entities
+        for key, value in entities.items():
+            if key not in ['vehicle_make', 'part_category'] and value:
+                self.entity_memory[key] = value
+        
+        # Update confidence based on LLM confidence
+        self.clf_conf = intent_data.get('confidence', 0.8)
+        
+        # Reset counters on high confidence
+        if self.clf_conf > 0.7:
+            self.oops_count = 0
+            self.consecutive_fallbacks = 0
+            
+    def manage_conversation_flow(self, intent_data: dict, message: str) -> None:
+        """Manage conversation flow using a state machine approach"""
+        current_state = self.conversation_state
+        primary_intent = intent_data.get('primary_intent')
+        
+        # Define state transitions
+        transitions = {
+            'initial': {
+                'product': 'product_search',
+                'faq': 'information',
+                'installation': 'installation_inquiry',
+                'lead': 'lead_capture',
+                'chitchat': 'initial'
+            },
+            'product_search': {
+                'product': 'product_search',
+                'installation': 'installation_inquiry',
+                'lead': 'lead_capture',
+                'faq': 'information',
+                'chitchat': 'product_search'
+            },
+            'installation_inquiry': {
+                'lead': 'lead_capture',
+                'product': 'product_search',
+                'installation': 'installation_inquiry',
+                'chitchat': 'installation_inquiry'
+            },
+            'lead_capture': {
+                # Lead capture has its own state management
+                'lead': 'lead_capture',
+                'negation': 'initial'
+            },
+            'information': {
+                'product': 'product_search',
+                'faq': 'information',
+                'installation': 'installation_inquiry',
+                'chitchat': 'initial'
+            }
+        }
+        
+        # Get next state based on intent
+        if primary_intent in transitions.get(current_state, {}):
+            next_state = transitions[current_state][primary_intent]
+        else:
+            # Default transition
+            next_state = current_state
+        
+        # Update state
+        self.conversation_state = next_state
+        
+        # Special state actions
+        if next_state == 'lead_capture' and not self.awaiting_lead_capture:
+            self.awaiting_lead_capture = True
+        
+        # Track state history
+        self.state_history.append(next_state)
+        
+    def process_multi_intent(self, intent_data: dict, message: str, history: List) -> str:
+        """Handle messages with multiple intents"""
+        primary_intent = intent_data.get('primary_intent')
+        secondary_intent = intent_data.get('secondary_intent')
+        
+        # Process primary intent first
+        primary_response = self.process_single_intent(primary_intent, message, history)
+        
+        # If there's a secondary intent, process it too
+        if secondary_intent and secondary_intent != primary_intent:
+            # Special handling for common combinations
+            if primary_intent == 'product' and secondary_intent == 'installation':
+                # Combine product search with installation info
+                vehicle = self.session_vehicle or intent_data.get('entities', {}).get('vehicle_make')
+                part = self.session_part or intent_data.get('entities', {}).get('part_category')
+                
+                if vehicle and part:
+                    minutes = self.get_install_time_minutes(part)
+                    install_info = f"\n\n⚙️ Installation: {minutes} minutes for professional installation. Would you like to book a service appointment?"
+                    self.pending_install_lead = True
+                    return primary_response + install_info
+            
+            elif primary_intent == 'faq' and secondary_intent == 'product':
+                # Add product suggestion after FAQ
+                return primary_response + "\n\nCan I help you find specific parts for your vehicle?"
+        
+        return primary_response
+        
+    def process_single_intent(self, intent: str, message: str, history: List) -> str:
+        """Process a single intent with enhanced context"""
+        # This will be implemented in the next step
+        # For now, return a placeholder
+        return f"Processing intent: {intent}"
     
     def get_available_makes(self) -> List[str]:
         """Get available vehicle makes from products data"""
@@ -274,16 +404,28 @@ class AutoPartsChatbot:
                 self.oops_count = 0
                 return "I'm having trouble understanding. Here are some examples:\n\n• 'Honda battery' - Find parts\n• 'What are your hours?' - Store info\n• 'Call me back' - Contact request\n\nWhat would you like to try?"
             
-            # Use LLM for polite off-scope redirect if confidence is low
+            # Check if message contains car-related terms but no specific make/part
+            car_terms = ['car', 'vehicle', 'auto', 'automobile', 'ride']
+            if any(term in message.lower() for term in car_terms):
+                from handle_vague_vehicle_query import handle_vague_vehicle_query
+                return handle_vague_vehicle_query(message, self.groq_api_key)
+            
+            # Always use LLM for unknown intents to provide a more natural response
             try:
-                system_prompt = "If user's request is outside auto-parts (weather, politics, etc.), reply politely in ≤2 sentences, then steer back: 'I can help you find parts or store info—just tell me make + part.'"
+                system_prompt = """You are a helpful auto parts store assistant. 
+                The user has sent a message that doesn't clearly specify a vehicle make or part.
+                
+                Respond naturally to their message, then gently guide them to provide:
+                1. Their vehicle make (Honda, Toyota, etc.)
+                2. What part they need (battery, tires, brakes, etc.)
+                
+                Keep your response friendly, conversational, and under 2 sentences.
+                """
                 llm_response = call_groq_api(self.groq_api_key, message, system_prompt)
                 return llm_response
             except Exception as e:
                 print(f"LLM fallback error: {e}")
-                pass
-            
-            return "I didn't catch that. Could you try asking about a specific car part or store information?"
+                return "I didn't catch that. Could you try asking about a specific car part or store information?"
         
         # Reset counters on recognized intent
         if intent != 'unknown':
@@ -479,6 +621,11 @@ class AutoPartsChatbot:
         # Handle product queries with improved context management
         # This handles both explicit 'product' intent and fallthrough cases
         current_vehicle, current_part = extract_vehicle_and_part(resolved_message, self.vehicle_synonyms, self.synonyms)
+        
+        # If message contains "car" or "vehicle" but no specific make or part
+        if ('car' in resolved_message.lower() or 'vehicle' in resolved_message.lower()) and not current_vehicle and not current_part:
+            from handle_vague_vehicle_query import handle_vague_vehicle_query
+            return handle_vague_vehicle_query(resolved_message, self.groq_api_key)
         
         # Use LLM for complex part extraction if we have a vehicle but no part detected
         if current_vehicle and not current_part and len(resolved_message.split()) > 3:
